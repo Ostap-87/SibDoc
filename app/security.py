@@ -21,7 +21,7 @@ USERS_FILE = os.path.join(PROJECT_ROOT, "storage", "users.json")
 
 ROLES = ("admin", "operator")
 DEFAULT_ADMIN_PASSWORD = "admin"      # смените через интерфейс: Пользователи -> смена пароля
-MIN_PASSWORD_LEN = 3
+MIN_PASSWORD_LEN = 8
 SESSION_TTL_SEC = 12 * 3600
 
 
@@ -95,24 +95,25 @@ def ensure_admin() -> bool:
     """Если пользователей нет — создать admin с паролем по умолчанию. -> был ли создан."""
     if load_users():
         return False
-    create_user("admin", DEFAULT_ADMIN_PASSWORD, "admin")
+    create_user("admin", DEFAULT_ADMIN_PASSWORD, "admin", _initial=True)
     return True
 
 
-def create_user(login: str, password: str, role: str = "operator") -> None:
+def create_user(login: str, password: str, role: str = "operator", _initial: bool = False) -> None:
     login = (login or "").strip()
     if not login or any(c in login for c in "/\\ '\""):
         raise ValueError("недопустимый логин")
     if role not in ROLES:
         raise ValueError(f"роль должна быть одной из: {ROLES}")
-    if len(password or "") < MIN_PASSWORD_LEN:
+    if not _initial and len(password or "") < MIN_PASSWORD_LEN:
         raise ValueError(f"пароль минимум {MIN_PASSWORD_LEN} символов")
     users = load_users()
     if login in users:
         raise ValueError("такой пользователь уже есть")
     salt = _new_salt()
     users[login] = {"salt": salt, "hash": _hash(password, salt), "role": role,
-                    "created": time.strftime("%Y-%m-%d %H:%M:%S")}
+                    "created": time.strftime("%Y-%m-%d %H:%M:%S"),
+                    "must_change": bool(_initial)}   # пароль по умолчанию — сменить при первом входе
     save_users(users)
 
 
@@ -122,6 +123,7 @@ def delete_user(login: str) -> None:
         raise ValueError("пользователь не найден")
     del users[login]
     save_users(users)
+    drop_user_sessions(login)
 
 
 def set_password(login: str, password: str) -> None:
@@ -133,7 +135,9 @@ def set_password(login: str, password: str) -> None:
     salt = _new_salt()
     users[login]["salt"] = salt
     users[login]["hash"] = _hash(password, salt)
+    users[login]["must_change"] = False
     save_users(users)
+    drop_user_sessions(login)
 
 
 def verify(login: str, password: str) -> dict | None:
@@ -141,7 +145,7 @@ def verify(login: str, password: str) -> dict | None:
     if not rec:
         return None
     if secrets.compare_digest(rec["hash"], _hash(password or "", rec["salt"])):
-        return {"login": login, "role": rec["role"]}
+        return {"login": login, "role": rec["role"], "must_change": bool(rec.get("must_change"))}
     return None
 
 
@@ -174,7 +178,20 @@ def get_session(token: str | None) -> dict | None:
     if rec["exp"] < time.time():
         _sessions.pop(token, None)
         return None
+    user = load_users().get(rec["login"])
+    if user is None:                       # пользователь удалён — сессия больше не действует
+        _sessions.pop(token, None)
+        return None
+    rec["role"] = user.get("role", "operator")   # роль всегда актуальная, а не на момент входа
     return rec
+
+
+def drop_user_sessions(login: str) -> int:
+    """Завершить все сессии пользователя (удаление, смена пароля)."""
+    tokens = [t for t, r in _sessions.items() if r.get("login") == login]
+    for t in tokens:
+        _sessions.pop(t, None)
+    return len(tokens)
 
 
 def drop_session(token: str | None) -> None:

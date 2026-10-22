@@ -20,7 +20,8 @@ import os
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
 FIELD_LABELS = {
-    "decl_num":        {"ru": "Номер декларации", "en": "Declaration No.", "zh": "报关单号"},
+    "decl_num":        {"ru": "Номер декларации КНР", "en": "CN declaration No.", "zh": "报关单号"},
+    "decl_ru":         {"ru": "Номер ДТ РФ",      "en": "RU DT No.",       "zh": "俄罗斯报关单号"},
     "container_num":   {"ru": "Контейнер",        "en": "Container",       "zh": "集装箱号"},
     "contract":        {"ru": "Контракт",         "en": "Contract",        "zh": "合同号"},
     "incoterms":       {"ru": "Инкотермс",        "en": "Incoterms",       "zh": "贸易术语"},
@@ -31,11 +32,14 @@ FIELD_LABELS = {
 }
 
 DEFAULT_PATTERNS: dict[str, list[str]] = {
+    "decl_ru": [
+        r"(\d{8}\s*/\s*\d{6}\s*/\s*[A-ZА-Я]?\d{7})",
+    ],
     "decl_num": [
         r"(?:ДТ|декларац\w*\s+на\s+товар\w*)[ №:\-]*(\d{18,25})",
         r"(?:declaration\s*(?:no\.?|number)|customs\s*decl\w*)[ №:\-]*(\d{18,25})",
         r"(?:报关\s*单\s*号|海关\s*编号)[ №:\-：:]*(\d{18,25})",
-        r"\b(\d{22})\b",
+        r"(?<![\d/])(\d{18})(?![\d/])",
     ],
     "container_num": [
         r"\b([A-ZА-Я]{4}\s?\d{7})\b",
@@ -81,6 +85,9 @@ DEFAULT_OCR_FIXES: dict[str, dict[str, str]] = {
         "F0B": "FOB", "FO8": "FOB", "FOE": "FOB",
         "CFK": "CFR", "CKR": "CFR",
         "EXY": "EXW", "EXV": "EXW",
+        "ECA": "FCA", "FGA": "FCA", "FCÁ": "FCA", "F CA": "FCA",
+        "CPI": "CPT", "GPT": "CPT", "CP7": "CPT",
+        "DAR": "DAP", "0AP": "DAP",
     },
 }
 
@@ -118,7 +125,9 @@ def _validate(field: str, value: str) -> str:
     if field == "container_num":
         return "found" if re.fullmatch(r"[A-Z]{4}\d{7}", value) else "review"
     if field == "decl_num":
-        return "found" if re.fullmatch(r"\d{18,25}", value) else "review"
+        return "found" if re.fullmatch(r"\d{18}", value) else "review"
+    if field == "decl_ru":
+        return "found" if re.fullmatch(r"\d{8}/\d{6}/[A-Z]?\d{7}", value) else "review"
     if field == "hs_code":
         digits = re.sub(r"\D", "", value)
         return "found" if 8 <= len(digits) <= 10 else "review"
@@ -156,6 +165,8 @@ def parse_declaration(text: str, cfg: dict | None = None) -> dict[str, dict[str,
         value, pat = hit
         if field == "container_num":
             value = value.translate(_CYR2LAT).replace(" ", "").upper()
+        elif field == "decl_ru":
+            value = re.sub(r"\s", "", value).translate(_CYR2LAT)
         elif field in ("decl_num", "hs_code"):
             value = _clean_number(value)
         elif field in ("unit_price", "net_weight"):

@@ -6,7 +6,9 @@ from __future__ import annotations
 одновременно: tesseract вызывается с lang=rus+eng+chi_sim.
 
 Логика:
-  PDF  -> PyMuPDF рендерит страницы в 300 DPI -> OCR каждой страницы
+  PDF  -> если на странице есть текстовый слой (PDF из программы, а не скан) —
+          берём готовый текст без OCR; иначе PyMuPDF рендерит страницу в 300 DPI -> OCR
+  TIFF -> все страницы многостраничного файла
   image-> предобработка (grayscale + autocontrast) -> OCR
 
 Языковые модели ищутся в:
@@ -20,7 +22,7 @@ import shutil
 import subprocess
 
 import pytesseract
-from PIL import Image, ImageOps
+from PIL import Image, ImageOps, ImageSequence
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 LOCAL_TESSDATA = os.path.join(PROJECT_ROOT, "tessdata")
@@ -62,15 +64,29 @@ def _ocr_image(img: Image.Image) -> str:
     return pytesseract.image_to_string(gray, lang=langs, config=cfg + " --psm 6")
 
 
-def _render_pdf(fileobj) -> list[Image.Image]:
+MIN_TEXT_LAYER_CHARS = 40
+
+
+def _pdf_pages(fileobj) -> list:
+    """-> список страниц: str (готовый текст слоя) или Image (нужен OCR)."""
     import pymupdf
     doc = pymupdf.open(stream=fileobj.read(), filetype="pdf")
     pages = []
     for page in doc:
+        text = page.get_text("text") or ""
+        if len("".join(text.split())) >= MIN_TEXT_LAYER_CHARS:
+            pages.append(text)
+            continue
         pix = page.get_pixmap(dpi=300)
         pages.append(Image.open(io.BytesIO(pix.tobytes("png"))))
     doc.close()
     return pages
+
+
+def _image_pages(fileobj) -> list:
+    img = Image.open(fileobj)
+    frames = [f.copy() for f in ImageSequence.Iterator(img)]
+    return frames or [img]
 
 
 def tesseract_available() -> bool:
@@ -80,18 +96,20 @@ def tesseract_available() -> bool:
 
 def read_scan(fileobj, filename: str) -> dict:
     """Прочитать скан -> {text, pages, engine_langs}."""
-    if not tesseract_available():
+    low = filename.lower()
+    pages = _pdf_pages(fileobj) if low.endswith(".pdf") else _image_pages(fileobj)
+    need_ocr = any(not isinstance(p, str) for p in pages)
+    if need_ocr and not tesseract_available():
         raise RuntimeError(
             "Tesseract OCR не найден в системе / Tesseract OCR not found / 未找到Tesseract OCR. "
             "Установите tesseract-ocr (см. README.md §OCR) — остальные функции работают без него.")
-    low = filename.lower()
-    if low.endswith(".pdf"):
-        pages = _render_pdf(fileobj)
-    else:
-        pages = [Image.open(fileobj)]
 
-    texts = []
+    texts, text_layer = [], 0
     for img in pages:
+        if isinstance(img, str):
+            texts.append(img)
+            text_layer += 1
+            continue
         # ограничим размер, чтобы OCR не умирал на гигантских сканах
         if max(img.size) > 4000:
             ratio = 4000 / max(img.size)
@@ -101,5 +119,6 @@ def read_scan(fileobj, filename: str) -> dict:
     return {
         "text": "\n\n".join(texts),
         "pages": len(pages),
-        "engine_langs": available_languages(),
+        "text_layer_pages": text_layer,
+        "engine_langs": available_languages() if need_ocr else ["text-layer"],
     }

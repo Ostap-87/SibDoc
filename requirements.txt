@@ -1,11 +1,19 @@
+# --- ядро ---
 pandas>=2.0
 openpyxl>=3.1
+xlrd>=2.0            # чтение старых .xls
 pyyaml>=6.0
 fastapi>=0.110
 uvicorn>=0.29
 python-multipart>=0.0.9
 reportlab>=4.0
+requests>=2.31       # курсы ЦБ РФ / CFETS, REST, SAP OData, 1С, WeCom, Telegram
+# --- сканы (OCR) ---
 pytesseract>=0.3.10
 Pillow>=10.0
 PyMuPDF>=1.24
+# --- коннекторы ---
+paramiko>=3.4        # SFTP
+SQLAlchemy>=2.0      # БД (драйвер конкретной БД ставится отдельно: pyodbc, psycopg и т. п.)
+# --- настольный режим ---
 pywebview

@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="windows-1251"?>
+<ESADout_CU xmlns="urn:customs.ru:Information:CustomsDocuments:ESADout_CU:5.24.0"
+            xmlns:cat_ru="urn:customs.ru:CommonAggregateTypes:5.24.0"
+            xmlns:catESAD_cu="urn:customs.ru:CUESADCommonAggregateTypesCust:5.24.0">
+  <cat_ru:DocumentID>DEMO-0000005</cat_ru:DocumentID>
+  <CustomsProcedure>ЭК</CustomsProcedure>
+  <CustomsModeCode>10</CustomsModeCode>
+  <cat_ru:GTDID>
+    <cat_ru:CustomsCode>10000010</cat_ru:CustomsCode>
+    <cat_ru:RegistrationDate>2026-09-19</cat_ru:RegistrationDate>
+    <cat_ru:GTDNumber>0000005</cat_ru:GTDNumber>
+  </cat_ru:GTDID>
+  <ESADout_CUGoodsShipment>
+    <ESADout_CUConsignor><cat_ru:OrganizationName>ООО «Пример Экспорт» (вымышленная)</cat_ru:OrganizationName></ESADout_CUConsignor>
+    <ESADout_CUConsignee><cat_ru:OrganizationName>DEMO IMPORT CO., LTD. (fictional)</cat_ru:OrganizationName></ESADout_CUConsignee>
+    <ESADout_CUMainContractTerms>
+      <catESAD_cu:ContractCurrencyCode>CNY</catESAD_cu:ContractCurrencyCode>
+      <catESAD_cu:TotalInvoiceAmount>219111.48</catESAD_cu:TotalInvoiceAmount>
+    </ESADout_CUMainContractTerms>
+    <ESADout_CUDeliveryTerms>
+      <cat_ru:DeliveryTermsStringCode>CPT</cat_ru:DeliveryTermsStringCode>
+      <cat_ru:DeliveryPlace>ЗАБАЙКАЛЬСК</cat_ru:DeliveryPlace>
+    </ESADout_CUDeliveryTerms>
+    <ESADout_CUGoods>
+      <catESAD_cu:GoodsNumeric>1</catESAD_cu:GoodsNumeric>
+      <catESAD_cu:GoodsDescription>ТЕРМОЭЛАСТОПЛАСТ СБС Л7322</catESAD_cu:GoodsDescription>
+      <catESAD_cu:GoodsDescription>МАРКА SBS L7322</catESAD_cu:GoodsDescription>
+      <catESAD_cu:GrossWeightQuantity>23020.2</catESAD_cu:GrossWeightQuantity>
+      <catESAD_cu:NetWeightQuantity>22680</catESAD_cu:NetWeightQuantity>
+      <catESAD_cu:InvoicedCost>219111.48</catESAD_cu:InvoicedCost>
+      <catESAD_cu:GoodsTNVEDCode>4002201000</catESAD_cu:GoodsTNVEDCode>
+      <catESAD_cu:OriginCountryCode>RU</catESAD_cu:OriginCountryCode>
+      <ESADout_CUPresentedDocument>
+        <cat_ru:PrDocumentName>КОНТРАКТ</cat_ru:PrDocumentName>
+        <cat_ru:PrDocumentNumber>ДЕМО.2002-05B</cat_ru:PrDocumentNumber>
+        <cat_ru:PrDocumentDate>2026-01-10</cat_ru:PrDocumentDate>
+        <catESAD_cu:PresentedDocumentModeCode>03011</catESAD_cu:PresentedDocumentModeCode>
+      </ESADout_CUPresentedDocument>
+      <catESAD_cu:ESADContainer>
+        <catESAD_cu:ContainerQuantity>1</catESAD_cu:ContainerQuantity>
+        <catESAD_cu:ContainerNumber><catESAD_cu:ContainerIdentificaror>DEMU0001075</catESAD_cu:ContainerIdentificaror></catESAD_cu:ContainerNumber>
+      </catESAD_cu:ESADContainer>
+    </ESADout_CUGoods>
+  </ESADout_CUGoodsShipment>
+</ESADout_CU>

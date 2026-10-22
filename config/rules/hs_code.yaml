@@ -1,3 +1,4 @@
 # Проверка HS-кодов (handbook, часть II)
-normalize_digits: true
 family_prefix_len: 6           # совпадение первых N знаков = REVIEW (семейство, другой суффикс)
+match_by: [material, model]    # как определить марку: материал SAP -> справочник элементов; марка из 申报要素
+unknown_grade: review          # марку определить нельзя, но код есть в таблице: review | ok

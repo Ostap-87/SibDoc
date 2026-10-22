@@ -11,13 +11,49 @@ product:
 
 # ----------------------------------------------------------------
 # ИСТОЧНИКИ ДАННЫХ (слоты загрузки)
-# required_columns — используются DQ-детекцией: отсутствие колонки
-# = ERROR с указанием, какая проверка пострадает.
+# fields           — какое поле единого словаря (config/fields.yaml) лежит в какой
+#                    колонке. Колонки с другими названиями (по-русски, по-китайски,
+#                    из другой выгрузки) переименовываются в эти имена автоматически.
+# canonical: true  — новые слоты: колонки называются именами полей словаря.
+# units            — единицы для веса/цены источника (kg | t), чтобы сравнение
+#                    было честным, а не по угаданному порогу.
+# required_columns — используются DQ-детекцией: отсутствие колонки = ERROR
+#                    с указанием, какая проверка пострадает.
+# sheet            — (необязательно) имя листа Excel; иначе выбирается лист,
+#                    где больше всего узнаваемых колонок.
 # ----------------------------------------------------------------
 sources:
   wide_table:
     label: "Wide table (CD data, FineBI Widetable)"
+    label_en: "Wide table (CD data, FineBI Widetable)"
+    label_zh: "宽表（报关单数据，FineBI）"
     required: true
+    fields:
+      decl_cn: decl_num
+      draft_num: draft_num
+      container: container_num
+      item_no: products_item_number
+      contract: contract
+      main_contract: main_contract
+      add_contract: add_contract
+      material: material
+      hs_code: product_code
+      product_name: product_name
+      decl_elements: products_specs_and_models
+      qty: products_qty
+      unit: products_unit
+      net_weight: products_net_weight
+      unit_price: products_price
+      currency: products_currency
+      sap_price: price
+      sap_currency: currency_value
+      incoterms: incoterms
+      sap_incoterms: shipreport_incoterms
+      extra_costs: extra_costs_value
+      storage_location: storage_location
+      decl_ru: gtd_full
+      decl_date: declaration_dt
+    units: {net_weight: kg, sap_price: t}
     sections:                       # секции/блоки данных внутри источника
       declaration: [decl_num, contract, incoterms, decl_issue_status]
       product:     [product_code, product_name, products_price, products_net_weight]
@@ -29,45 +65,96 @@ sources:
 
   purchase:
     label: "Purchase (SAP data, FineBI Purchase)"
+    label_en: "Purchase (SAP data, FineBI Purchase)"
+    label_zh: "采购表（SAP 数据，FineBI）"
     required: true
+    fields:
+      container: "Container number"
+      sap_price: "Price"
+      currency: "Currency"
+      main_contract: "Main contract"
+      add_contract: "Add contract"
+      net_weight: "Net weight"
+      decl_ru: "Russian export decl"
+      material: "Material"
+      shipment_date: "Shipment date"
+    units: {net_weight: t, sap_price: t}
     sections:
       main: ["Container number", "Price", "Main contract", "Add contract",
              "Net weight", "Russian export decl"]
     required_columns: ["Container number", "Price", "Main contract",
                        "Add contract", "Net weight"]
 
+  ru_dt:
+    label: "ДТ РФ (XML ФТС из программы брокера или Excel)"
+    label_en: "RU customs declarations (FCS XML or Excel)"
+    label_zh: "俄罗斯报关单（海关 XML 或 Excel）"
+    required: false
+    canonical: true
+    multi: true                     # можно загрузить сразу много файлов (одна ДТ = один XML)
+    units: {net_weight: kg}
+    sections:
+      header: [decl_ru, decl_date, contract, currency, incoterms]
+      goods:  [hs_code, net_weight, total_value, container]
+    required_columns: [decl_ru]
+
+  cn_dec:
+    label: "报关单 КНР (файл китайского брокера: Excel / CSV / XML)"
+    label_en: "CN customs declarations (broker Excel / CSV / XML)"
+    label_zh: "中国报关单（报关行 Excel / CSV / XML）"
+    required: false
+    canonical: true
+    multi: true
+    units: {net_weight: kg}
+    sections:
+      header: [decl_cn, decl_date, contract, incoterms]
+      goods:  [hs_code, unit_price, currency, net_weight, container]
+    required_columns: [decl_cn]
+
   sap_vs_cd:
     label: "SAP vs CD (ручная сводная таблица)"
+    label_en: "SAP vs CD (manual summary table)"
+    label_zh: "SAP 与报关单对照（手工汇总表）"
     required: false
+    fields: {decl_cn: decl_num}
     sections:
       main: [decl_num]
     required_columns: [decl_num]
 
   cd_drafts:
     label: "Черновики деклараций"
+    label_en: "Declaration drafts"
+    label_zh: "报关单草稿"
     required: false
     sections: {}
     required_columns: []
 
   hs_reference:
     label: "Справочник HS-кодов (грейд/завод/код)"
+    label_en: "HS code reference (grade / plant / code)"
+    label_zh: "商品编号参考表（牌号/工厂/编号）"
     required: false
     builtin: "references/hs_codes.csv"     # встроенный файл, если не загружен
+    fields: {hs_code: hs_code, model: declared_model}
     sections:
       main: [hs_code]
     required_columns: [hs_code]
 
   cde_reference:
     label: "Справочник элементов декларации"
+    label_en: "Declaration elements reference"
+    label_zh: "申报要素参考表"
     required: false
     builtin: "references/declaration_elements.csv"
+    fields: {material: Material, hs_code: "HS Code", model: "报关单申报型号", decl_elements: "申报要素"}
     sections: {}
     required_columns: []
 
 # ----------------------------------------------------------------
 # ПРОВЕРКИ (вкл/выкл + ссылка на файл правил)
 # Параметры, которые может менять специалист без программиста, —
-# в config/rules/*.yaml (редактируются также через API/UI).
+# в config/rules/*.yaml (редактируются также через API/UI; каждая
+# правка пишется в журнал, прежняя версия сохраняется).
 # ----------------------------------------------------------------
 checks:
   completeness:    {enabled: true, rules: "completeness.yaml"}
@@ -76,6 +163,7 @@ checks:
   incoterms:       {enabled: true, rules: "incoterms.yaml"}
   decl_elements:   {enabled: true, rules: "decl_elements.yaml"}
   contracts:       {enabled: true, rules: "contracts.yaml"}
+  cross_border:    {enabled: true, rules: "cross_border.yaml"}
 
 # ----------------------------------------------------------------
 # DATA-QUALITY ДЕТЕКЦИЯ
@@ -85,18 +173,31 @@ data_quality:
   empty_column_threshold: 0.95     # колонка пуста, если >=95% значений пустые
   sparse_column_threshold: 0.30    # колонка "редкая", если заполнена <30%
   duplicate_key_warning: true      # предупреждать о дублях ключей (контейнер/CD)
+  container_check_digit: true      # проверять контрольную цифру номера контейнера (ISO 6346)
+  mixed_scripts_warning: true      # кириллица и латиница вперемешку в ключах (СХ/CX)
   numeric_columns:                 # где ожидаются числа — детектим текст/мусор
     wide_table: [products_price, products_net_weight]
     purchase: ["Price", "Net weight"]
+    ru_dt: [net_weight, total_value]
+    cn_dec: [net_weight, unit_price, total_value]
 
 # ----------------------------------------------------------------
 # ВЫВОД
 # ----------------------------------------------------------------
 output:
   dir: "storage/reports"
-  excel_name: "post_control_report.xlsx"
+  excel_name: "post_control_report.xlsx"   # последний отчёт; у каждого прогона — своя копия с номером
   pdf_name: "post_control_report.pdf"
   max_examples_per_finding: 5
+  keep_runs: 100                   # сколько прошлых прогонов хранить (отчёты + сводка)
+  pdf_max_rows_per_check: 200      # строк на проверку в PDF (полные данные — в Excel)
+
+# ----------------------------------------------------------------
+# СЕРВЕР
+# ----------------------------------------------------------------
+server:
+  max_upload_mb: 100               # предельный размер одного файла
+  cors_origins: ["*"]              # для прототипа; в рабочей установке — адрес сервера
 
 # ----------------------------------------------------------------
 # УЧЁТНЫЕ ЗАПИСИ. По умолчанию локальный вход: admin/admin
@@ -116,52 +217,263 @@ output:
 # ----------------------------------------------------------------
 # КОННЕКТОРЫ ИСТОЧНИКОВ. Кнопка «Обновить данные» опрашивает все
 # enabled: true коннекторы и перечитывает файлы. По умолчанию все
-# выключены — заполните параметры и поставьте enabled: true.
-# Кнопка «Проверить» в интерфейсе тестирует соединение без загрузки.
+# выключены. Первая очередь (почта, папка, SFTP, REST, БД, SAP) работает
+# сразу после заполнения параметров; вторая (1С, ЭТРАН, Единое окно КНР,
+# Kingdee, Yonyou, банк) — задел: «Проверить» отвечает, какой доступ нужен.
+# Кнопка «Проверить» тестирует соединение без загрузки.
+# ----------------------------------------------------------------
+# ----------------------------------------------------------------
+# КОННЕКТОРЫ ИСТОЧНИКОВ. Кнопка «Обновить данные» опрашивает все
+# enabled: true коннекторы и перечитывает файлы. По умолчанию ВСЕ
+# выключены. Первая очередь (stage: ready) работает сразу после
+# заполнения параметров; вторая очередь (stage: needs_access) — задел:
+# «Проверить» покажет, какой доступ и у кого нужно получить.
+#
+# Пароли, токены и ключи в этот файл НЕ пишем: указываем имя
+# переменной окружения (<поле>_env: ИМЯ) или ${ИМЯ} внутри строки.
+# Переменные задаются на сервере (.env рядом с docker-compose.yml,
+# секреты Docker/systemd), в git не попадают.
+#
+# Слоты: wide_table, purchase, sap_vs_cd, cd_drafts, hs_reference,
+# cde_reference, ru_dt (российская ДТ: XML ФТС/Excel), cn_dec
+# (китайская декларация 报关单: Excel/CSV/XML брокера).
+# Файл кладётся в слот по slot_rules (regex по имени, для почты —
+# ещё и по отправителю) или по началу имени (slots).
+# ----------------------------------------------------------------
 connectors:
+  # ============================ ПЕРВАЯ ОЧЕРЕДЬ ============================
+  mail_brokers:
+    type: imap
+    enabled: false
+    label: Почта брокеров (вложения)
+    # host: imap.example.ru
+    # port: 993                       # 993 — SSL, 143 — STARTTLS
+    # security: ssl                   # ssl | starttls
+    # username: sibdoc@example.ru
+    # password_env: SIBDOC_IMAP_PASSWORD   # пароль приложения — в переменной окружения
+    # folder: INBOX                   # можно по-русски: "Входящие/Брокер"
+    # from: ["@cn-broker.example", "declarant@broker-ru.example"]   # адреса или домены
+    # subject_contains: ["报关单", "ДТ", "declaration"]              # любое из
+    # unseen_only: false              # только непрочитанные
+    # since_days: 14                  # за последние N дней
+    # attachments: ["*.xlsx", "*.xls", "*.csv", "*.xml", "*.pdf", "*.zip"]
+    # after_success: none             # none | mark_seen | move
+    # move_to: "SibDoc/Обработано"    # для move
+    # max_messages: 200               # писем за один опрос (новейшие)
+    # zip_max_total_mb: 200           # лимит распаковки архива
+    # slot_rules:
+    #   - {pattern: '(?i)(报关单|customs.?dec|cn_dec)', slot: cn_dec}
+    #   - {pattern: '(?i)((?<![a-zа-яё])ДТ(?![a-zа-яё])|ESADout|gtd|ru_dt)', slot: ru_dt}
+    #   - {pattern: '(?i)\.xml$', sender: '(?i)@broker-ru\.example$', slot: ru_dt}
+    # slots: [wide_table, purchase]   # плюс по началу имени файла
+    # Уже забранные вложения (Message-ID + имя) — storage/connectors/mail_brokers.seen.json
+
   incoming_folder:
     type: folder
     enabled: false
-    label: Папка с выгрузками
-    # path: /data/incoming          # путь на сервере, куда кладутся новые Excel/CSV
-    # pattern: "*.xlsx"
-    # slots: [wide_table, purchase] # маппинг по имени файла
+    label: Папка с выгрузками / файлы китайского брокера
+    # path: /data/incoming            # папка на сервере (можно смонтированную сетевую)
+    # pattern: ["*.xlsx", "*.csv", "*.xml", "*.zip"]
+    # slots: [wide_table, purchase]
+    # slot_rules:
+    #   - {pattern: '(?i)(报关单|customs.?dec|cn_dec)', slot: cn_dec}
 
-  sftp_sibur:
+  sftp_broker:
     type: sftp
     enabled: false
-    label: SFTP (корпоративный)
+    label: SFTP (брокер / корпоративный)
     # host: sftp.example.ru
     # port: 22
     # username: svc_sibdoc
-    # password: ""                  # или key_file (ключ предпочтительнее)
-    # key_file: ""
+    # key_file: /run/secrets/sibdoc_sftp_ed25519   # ключ предпочтительнее пароля
+    # key_passphrase_env: SIBDOC_SFTP_KEY_PASS
+    # password_env: SIBDOC_SFTP_PASSWORD           # если без ключа
+    # known_hosts: /app/config/known_hosts         # ssh-keyscan -p 22 sftp.example.ru >> known_hosts
+    # host_key_sha256: "SHA256:..."                # или отпечаток (ssh-keygen -lf)
+    # insecure_accept_new_host: false              # true — только для первой настройки!
     # remote_dir: /uploads/sibdoc
-    # pattern: "*.xlsx"
+    # pattern: ["*.xlsx", "*.csv", "*.xml", "*.zip"]
     # slots: [wide_table, purchase]
+    # slot_rules:
+    #   - {pattern: '(?i)(报关单|customs.?dec|cn_dec)', slot: cn_dec}
+
+  broker_api:
+    type: rest
+    enabled: false
+    label: REST API (универсальный)
+    # url: "https://api.example.ru/v1/declarations"
+    # method: GET                     # GET | POST
+    # headers: {"Accept": "application/json"}
+    # params: {"status": "released"}  # query-параметры
+    # body: null                      # JSON-тело для POST
+    # auth: bearer                    # none | basic | bearer | api_key_header
+    # token_env: SIBDOC_API_TOKEN     # bearer
+    # username: svc                   # basic
+    # password_env: SIBDOC_API_PASSWORD
+    # api_key_header: X-API-Key       # api_key_header
+    # api_key_env: SIBDOC_API_KEY
+    # records_path: data.list         # d.results | value | data.list | (пусто — авто)
+    # pagination: auto                # auto | none | next_link | page | offset
+    # page_param: page
+    # page_size_param: page_size
+    # page_size: 100
+    # slot: cn_dec                    # сохранится как cn_dec.csv
 
   finebi_db:
     type: database
     enabled: false
     label: БД FineBI
-    # url: "mssql+pyodbc://USER:PASS@server:1433/DB?driver=ODBC+Driver+18+for+SQL+Server&Encrypt=yes"
-    # queries:                      # слот: SQL-запрос
+    # url_env: SIBDOC_FINEBI_DB_URL   # строка SQLAlchemy целиком (в ней пароль)
+    # queries:                        # слот: SQL-запрос
     #   wide_table: "SELECT * FROM v_wide_table"
     #   purchase:   "SELECT * FROM v_purchase"
+    # timeout_sec: 300
 
   sap_s4:
     type: sap_odata
     enabled: false
-    label: SAP S/4HANA (OData)
+    label: SAP S/4HANA (OData v2/v4)
     # base_url: "https://sap.example.ru:44300/sap/opu/odata/sap/API_PURCHASEORDER_0001"
     # entity: "A_PurchaseOrderItem"
     # params: {"$top": "50000"}
-    # auth: basic                   # basic | oauth2
-    # username: ""
-    # password: ""
+    # auth: basic                     # basic | oauth2
+    # username: svc_sibdoc
+    # password_env: SIBDOC_SAP_PASSWORD
+    # token_url: ""                   # oauth2
+    # client_id: ""
+    # client_secret_env: SIBDOC_SAP_CLIENT_SECRET
     # verify_tls: true
+    # ca_bundle: /etc/ssl/corp-ca.pem # свой корневой сертификат, если нужен
     # slots: [purchase]
 
-# вход без пароля (false = вход по логину/паролю)
+  # ===================== ВТОРАЯ ОЧЕРЕДЬ (задел, ждёт доступа) =====================
+  onec:
+    type: onec_odata
+    enabled: false
+    label: 1С (OData)
+    # Нужно от администратора 1С: публикация базы с «Публиковать стандартный интерфейс OData»,
+    # объекты в составе OData, пользователь с правом чтения.
+    # base_url: "https://1c.example.ru/trade"
+    # entity: "Document_ПоступлениеТоваровУслуг"
+    # username: sibdoc
+    # password_env: SIBDOC_1C_PASSWORD
+    # filter: "Posted eq true"
+    # select: "Number,Date,СуммаДокумента"
+    # page_size: 1000
+    # slot: purchase
+
+  etran:
+    type: etran
+    enabled: false
+    label: ЭТРАН (РЖД)
+    # Нужно: договор с РЖД на веб-сервис ЭТРАН, пользователь ЭТРАН, сертификат ЭЦП (КриптоПро).
+    # service_url: ""                 # выдаёт РЖД по договору
+    # login: ""
+    # password_env: SIBDOC_ETRAN_PASSWORD
+    # cert_thumbprint: ""
+    # org_code: ""
+    # export_dir: /data/incoming/etran   # пока нет доступа: выгрузки из АРМ ЭТРАН
+
+  cn_single_window:
+    type: cn_single_window
+    enabled: false
+    label: Единое окно КНР (单一窗口)
+    # Нужно: UKey (卡介质) импортёра или брокера; открытого API нет — уточнить у брокера.
+    # role: broker                    # importer | broker
+    # company_code: ""                # 海关10位编码 / 统一社会信用代码
+    # ukey_holder: ""
+    # service_url: ""                 # API ПО брокера, если есть
+    # token_env: SIBDOC_CN_SW_TOKEN
+    # export_dir: /data/incoming/cn_dec  # пока: 报关单 от брокера в папку
+    # slot_rules: [{pattern: '(?i)(报关单|customs.?dec)', slot: cn_dec}]
+
+  kingdee:
+    type: kingdee
+    enabled: false
+    label: Kingdee 金蝶云星空
+    # Нужно от администратора Kingdee: адрес K3Cloud, 账套ID, пользователь с правом WebAPI.
+    # server_url: "https://erp.example.cn/k3cloud"
+    # acct_id: ""
+    # username: ""
+    # password_env: SIBDOC_KINGDEE_PASSWORD
+    # lcid: 2052
+    # form_id: PUR_PurchaseOrder
+    # field_keys: "FBillNo,FDate,FSupplierId.FName,FMaterialId.FNumber,FQty,FPrice"
+    # filter_string: "FDocumentStatus='C'"
+    # page_size: 2000
+    # slot: purchase
+
+  yonyou:
+    type: yonyou
+    enabled: false
+    label: Yonyou 用友 YonBIP
+    # Нужно от администратора YonBIP: 自建应用 с AppKey/AppSecret, адреса шлюза, путь API.
+    # auth_url: "https://<dc>.yonyoucloud.com/iuap-api-auth"
+    # gateway_url: "https://<dc>.yonyoucloud.com/iuap-api-gateway"
+    # app_key: ""
+    # app_secret_env: SIBDOC_YONYOU_APP_SECRET
+    # api_path: ""                    # уточнить у владельца системы
+    # body: {}
+    # records_path: data.recordList
+    # slot: purchase
+
+  bank_fx:
+    type: bank_fx_control
+    enabled: false
+    label: Банк — валютный контроль
+    # Нужно: API банка для юрлиц (client_id/secret, сертификат) или выгрузка 1С:ДиректБанк.
+    # bank: ""
+    # api_url: ""
+    # client_id: ""
+    # client_secret_env: SIBDOC_BANK_CLIENT_SECRET
+    # cert_file: ""
+    # cert_password_env: SIBDOC_BANK_CERT_PASSWORD
+    # unk: []                         # УНК контрактов
+    # export_dir: /data/incoming/directbank
+
+# ----------------------------------------------------------------
+# УВЕДОМЛЕНИЯ о прогонах и ошибках коннекторов (по умолчанию выключены)
+# ----------------------------------------------------------------
+# ----------------------------------------------------------------
+# УВЕДОМЛЕНИЯ. Каналы по умолчанию выключены. События:
+#   run_done — прогон завершён; issues_found — найдены расхождения;
+#   connector_error — ошибка коннектора. events пусто или "*" — все.
+# Ключи и токены — только через переменные окружения (*_env).
+# ----------------------------------------------------------------
+notifications:
+  wecom_team:
+    type: wecom                       # 企业微信: групповой бот
+    enabled: false
+    label: WeCom — группа таможни
+    key_env: SIBDOC_WECOM_KEY         # key=… из адреса вебхука бота
+    events: [run_done, issues_found, connector_error]
+    send_files: true                  # прикладывать Excel/PDF отчёта (до 20 МБ)
+
+  telegram_ops:
+    type: telegram
+    enabled: false
+    label: Telegram — дежурные
+    token_env: SIBDOC_TG_TOKEN
+    # chat_id: "-1001234567890"
+    events: [issues_found, connector_error]
+    # api_url: https://api.telegram.org   # свой сервер Bot API, если telegram недоступен
+    # proxy: http://proxy.example.ru:3128
+
+  email_team:
+    type: email
+    enabled: false
+    label: Почта — команда пост-контроля
+    # host: smtp.example.ru
+    # port: 465                       # 465 — SSL, 587 — STARTTLS
+    # security: ssl                   # ssl | starttls
+    # username: sibdoc@example.ru
+    password_env: SIBDOC_SMTP_PASSWORD
+    # from: "SibDoc <sibdoc@example.ru>"
+    # to: ["customs-team@example.ru"]
+    subject_prefix: "[SibDoc]"
+    events: [run_done, issues_found]
+    send_files: true
+
+# вход без пароля (прототип). false = вход по логину/паролю
 auth:
   disabled: true

@@ -2,60 +2,73 @@ from __future__ import annotations
 # -*- coding: utf-8 -*-
 """Проверка 5: контракт CD vs SAP (main + add contract) по контейнерам.
 
-Сравнение каноническое: без пробелов/дефисов, верхний регистр.
-Контракт в wide table может быть «склеенным» (SISH.12235-SISH.12236),
-а в Purchase — отдельными строками; совпадение с ЛЮБОЙ строкой = OK.
+Одна строка = контейнер × декларация КНР. Сравнение каноническое: латиница
+вместо кириллических «двойников» (СХ = CX), без пробелов/дефисов и символов
+из правила ignore_chars. «Склеенный» контракт в wide table
+(«СХ.35105-396В/СХ.35105-302В», «SISH.12235-SISH.12236») делится на части;
+совпадение любой части с любой строкой SAP по контейнеру = OK.
 """
 import pandas as pd
-from app.models import CheckOutput, Status
-from app.normalizers import canon_contract, norm_container, norm_text
+
 from app.checks import register
+from app.checks._common import Cols, contract_match, sap_lines, skipped, sort_df
+from app.models import CheckOutput, Status
+from app.normalizers import has_mixed_scripts, norm_container, norm_text, split_contracts
+
+TITLE = "5. Contract"
 
 
 def run(sources: dict, rules: dict, cfg: dict) -> CheckOutput:
     wide = sources.get("wide_table")
-    purchase = sources.get("purchase")
-    if wide is None or purchase is None:
-        return CheckOutput("contracts", "5. Contract", pd.DataFrame([{
-            "check": "5. Contract", "status": Status.SKIPPED.value,
-            "detail": "Нужны wide table и Purchase."}]))
+    if wide is None or sources.get("purchase") is None:
+        return skipped("contracts", TITLE, "Нужны wide table и Purchase.")
 
-    p = purchase.df.copy()
-    p["ctn"] = p["Container number"].map(norm_container)
-    p["sap_contract"] = (p["Main contract"].map(norm_text) + "-" +
-                         p["Add contract"].map(norm_text)).str.strip("-")
-    cmap = (p[p["ctn"] != ""].groupby("ctn")["sap_contract"]
-            .apply(lambda s: sorted(set(s))).to_dict())
+    ignore = rules.get("ignore_chars")
+    ignore = None if ignore is None else str(ignore)
+    glued = bool(rules.get("glued_contracts", True))
+    main_only = str(rules.get("main_only_match", "review"))
+
+    W = Cols(cfg, "wide_table", wide.df)
+    sap = sap_lines(sources, cfg)
+    cmap = {c: sorted(set(g["contract"]) - {""}) for c, g in sap.groupby("container")} if not sap.empty else {}
 
     w = wide.df.copy()
-    w["ctn"] = w["container_num"].map(norm_container)
-    w = w[w["ctn"] != ""].drop_duplicates("ctn")
+    w["_ctn"] = w[W("container")].map(norm_container) if W("container") else ""
+    w = w[w["_ctn"] != ""]
+    keys = ["_ctn"] + [c for c in (W("decl_cn"), W("contract")) if c]
+    w = w.drop_duplicates(keys)
 
     rows = []
     for _, r in w.iterrows():
-        cd_c = norm_text(r.get("contract"))
-        sap_cs = cmap.get(r["ctn"], [])
-        ok = any(canon_contract(cd_c) == canon_contract(s) for s in sap_cs)
+        cd_c = norm_text(W.get(r, "contract", ""))
+        sap_cs = cmap.get(r["_ctn"], [])
+        parts = split_contracts(cd_c) if glued else [cd_c]
+        kinds = {s: (contract_match(cd_c, s, ignore) if glued else
+                     ("full" if _plain_eq(cd_c, s, ignore) else "")) for s in sap_cs}
+        full = [s for s, k in kinds.items() if k == "full"]
+        main = [s for s, k in kinds.items() if k == "main"]
+        note = " Внимание: в номере смешаны кириллица и латиница." if has_mixed_scripts(cd_c) else ""
         if not sap_cs:
             st, dt = Status.REVIEW.value, "контракт SAP не найден"
-        elif ok:
-            st, dt = Status.OK.value, "контракт совпадает"
+        elif full:
+            st = Status.OK.value
+            dt = ("контракт совпадает" if len(parts) <= 1 else
+                  f"«склеенный» контракт ({len(parts)} части): совпала часть {full[0]}") + note
+        elif main and main_only != "issue":
+            st = Status.REVIEW.value if main_only == "review" else Status.OK.value
+            dt = f"совпал основной контракт ({main[0]}), доп. соглашение в CD не указано" + note
         else:
-            st, dt = Status.ISSUE.value, "РАСХОЖДЕНИЕ КОНТРАКТА"
-        rows.append({
-            "check": "5. Contract",
-            "container": r["ctn"],
-            "decl_num": r.get("decl_num"),
-            "cd_contract": cd_c,
-            "sap_contract": " | ".join(sap_cs),
-            "status": st, "detail": dt})
+            st, dt = Status.ISSUE.value, "РАСХОЖДЕНИЕ КОНТРАКТА" + note
+        rows.append({"check": TITLE, "container": r["_ctn"], "decl_num": W.get(r, "decl_cn", ""),
+                     "cd_contract": cd_c, "cd_contract_parts": " | ".join(parts) if len(parts) > 1 else "",
+                     "sap_contract": " | ".join(sap_cs), "status": st, "detail": dt})
 
-    df = pd.DataFrame(rows)
-    if not df.empty:
-        df["_o"] = df["status"].map({Status.ISSUE.value: 0, Status.REVIEW.value: 1,
-                                     Status.SKIPPED.value: 2, Status.OK.value: 3})
-        df = df.sort_values("_o").drop(columns="_o")
-    return CheckOutput("contracts", "5. Contract", df)
+    return CheckOutput("contracts", TITLE, sort_df(pd.DataFrame(rows)))
 
 
-register("contracts", "5. Contract", run)
+def _plain_eq(a: str, b: str, ignore) -> bool:
+    from app.normalizers import canon_contract
+    return bool(canon_contract(a, ignore)) and canon_contract(a, ignore) == canon_contract(b, ignore)
+
+
+register("contracts", TITLE, run)

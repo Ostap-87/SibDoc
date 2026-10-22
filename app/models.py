@@ -20,6 +20,7 @@ class Source:
     slot: str            # идентификатор слота: wide_table, purchase, ...
     name: str            # имя файла
     df: pd.DataFrame = field(default_factory=pd.DataFrame)
+    info: dict = field(default_factory=dict)   # как прочитан: формат, лист, кодировка, переименования
 
     @property
     def rows(self) -> int:

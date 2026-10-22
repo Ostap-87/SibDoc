@@ -148,104 +148,123 @@ checks:
 
 | Метод | Путь | Назначение |
 |---|---|---|
-| GET | `/api/health` | жив ли сервис |
-| GET | `/api/config` | источники и проверки |
-| GET | `/api/sources` | состояние слотов загрузки |
-| POST | `/api/upload/{slot}` | загрузить файл (multipart, поле `file`) |
+| GET | `/api/health`, `/api/config` | жив ли сервис; источники, проверки, режим входа, допустимые форматы |
+| GET | `/api/fields`, `/api/labels` | словарь полей RU/EN/ZH; подписи проверок, статусов, колонок |
+| GET | `/api/sources` | состояние слотов: файлы, как прочитаны (формат, лист, кодировка), распознанные колонки |
+| POST | `/api/upload/{slot}?append=` | загрузить файл(ы): поле `file` или несколько `files`; xlsx/xls/csv/xml/zip |
 | DELETE | `/api/upload/{slot}` | очистить слот |
-| GET | `/api/rules`, `/api/rules/{file}` | чтение правил |
-| PUT | `/api/rules/{file}` | обновление правил (JSON-тело) |
-| POST | `/api/run` | прогон: summary + DQ + строки проверок + ссылки на отчёты |
-| GET | `/api/report/excel`, `/api/report/pdf` | скачать отчёты |
-| GET | `/api/scans/info` | языки OCR и принимаемые форматы |
-| POST | `/api/scans/upload` | массовая загрузка сканов (поле `files`, multi) → OCR + извлечение полей |
-| GET | `/api/scans/preview?lang=` | строки предпросмотра + локализованные подписи полей |
-| GET | `/api/scans/excel` | Excel предпросмотра (значения в ячейках, раскраска) |
-| DELETE | `/api/scans` | очистить загруженные сканы |
+| GET | `/api/sources/{slot}/preview?limit=&lang=` | таблица источника с подписями колонок |
+| GET | `/api/declarations/{ru_dt\|cn_dec}` | декларации карточками: шапка + товары |
+| GET / PUT | `/api/rules/{file}` | правила (+ `history`); PUT пишет журнал с diff, сохраняет прежнюю версию |
+| GET / POST | `/api/rules/{file}/history/{ver}`, `/restore/{ver}` | просмотр и откат версии |
+| POST | `/api/run` | прогон: номер, сводка, DQ, строки проверок с подписями колонок, курсы, ссылки на отчёты |
+| GET | `/api/runs`, `/api/runs/{id}/excel\|pdf` | история прогонов и их отчёты |
+| GET | `/api/report/excel`, `/api/report/pdf` | последний отчёт |
+| GET | `/api/rates?date=&source=` | курсы на дату (официальные + ручные) |
+| POST | `/api/rates/refresh` | скачать курс источника на дату |
+| GET / POST / DELETE | `/api/rates/manual[/{id}]` | ручные курсы |
+| GET / PUT | `/api/rates/settings` | режим `official` / `manual_override` и др. |
+| GET | `/api/rates/convert?amount&from_ccy&to_ccy&date&side` | пересчёт |
+| GET | `/api/connectors`, `/api/connectors/catalog` | настроенные коннекторы; все типы |
+| POST | `/api/connectors/{id}/test`, `/pull` | проверить доступ; забрать данные в слоты |
+| POST | `/api/reload` | опросить включённые коннекторы и перечитать сохранённые файлы |
+| GET / POST | `/api/notifications`, `/{id}/test` | каналы уведомлений, тестовое сообщение |
+| GET | `/api/journal?day&q&kind&date_from&date_to`, `/kinds`, `/days`, `/export` | журнал, виды событий, календарь, CSV |
+| POST / GET / DELETE | `/api/scans/upload`, `/preview`, `/excel`, `/to-source` | сканы: OCR, предпросмотр, перенос в `ru_dt`/`cn_dec` |
 
-### OCR-подсистема (app/services/ocr_reader.py, decl_parser.py, scan_mapper.py)
+## 6. Данные: словарь полей, загрузка, XML
 
-- `ocr_reader.read_scan(fileobj, filename)` — PDF рендерится PyMuPDF в 300 DPI,
-  изображения предобрабатываются (grayscale+autocontrast), OCR через
-  pytesseract с `lang=rus+eng+chi_sim`. Модели лежат в `tessdata/` пакета
-  (офлайн); переопределяются через `TESSDATA_PREFIX`.
-- `decl_parser.parse_declaration(text)` — извлечение 8 полей по паттернам из
-  `config/scan_fields.yaml`; статусы found/review/missing; кириллица в
-  контейнерах приводится к латинице. FIELD_LABELS — подписи полей на 3 языках.
-- `scan_mapper` — маппинг поле→колонка Excel из `config/scan_mapping.yaml`;
-  `write_preview_excel()` раскрашивает ячейки по статусу.
+- **`config/fields.yaml` + `app/fields.py`** — единый словарь (поле → подписи RU/EN/ZH,
+  тип, синонимы колонок и тегов XML). `map_columns(df, slot_fields)` переименовывает
+  распознанные колонки в имена, которые ждёт слот (`sources.<slot>.fields`);
+  `canonicalize(df)` — для слотов с `canonical: true` (`ru_dt`, `cn_dec`).
+- **`app/services/loader.py`** — `read_table(bytes, name, slot, cfg)`: кодировки, разделители,
+  выбор листа и строки заголовков, `.xls`, XML, ZIP; `read_many(files, slot, cfg)` — несколько
+  файлов в слот. `Source.info` хранит, как прочитан файл.
+- **`config/xml_profiles.yaml` + `app/services/xml_decl.py`** — разбор XML деклараций по
+  профилям (теги на поле, перекодировки валют / условий / единиц, контейнеры, контракт из
+  документов 03011). Пространства имён игнорируются, windows-1251 поддерживается, XML с
+  DOCTYPE/ENTITY отклоняется. Новый формат = новый профиль, без кода.
+- **`app/checks/_common.py`** — общие помощники проверок: `Cols` (имя колонки поля в слоте),
+  `sap_lines` (строки SAP в едином виде), `contract_match` (склейка, основной контракт),
+  `fx_convert` (пересчёт через `app.rates`), `sort_df`, `worst`.
 
-Расширение: новое поле = паттерны в scan_fields.yaml + подпись в FIELD_LABELS +
-колонка в scan_mapping.yaml. Новый язык OCR = скачать `<lang>.traineddata`
-в tessdata/ и добавить код в LANGS (ocr_reader) — требует пересборки образа.
-
-Загруженные файлы хранятся в памяти процесса (одна сессия). Для multi-user
-замените `_uploads` в `server.py` на хранилище по session-id.
-
-**Пример автопрогона:**
-```bash
-curl -F "file=@wide.xlsx"  -X POST http://server:8000/api/upload/wide_table
-curl -F "file=@pur.xlsx"   -X POST http://server:8000/api/upload/purchase
-curl -X POST http://server:8000/api/run
-curl -OJ http://server:8000/api/report/excel
-```
-
----
-
-## 6. Нормализация (app/normalizers.py) — почему это важно
+## 7. Нормализация (app/normalizers.py)
 
 | Функция | Правило |
 |---|---|
-| `norm_container` | верхний регистр, без пробелов |
-| `norm_price` | `9 661` / `9661,00` / число → float |
-| `scale_cd_price` | `< per_kg_threshold` → ×1000 (CD за кг vs SAP за тонну) |
-| `norm_hs` | только цифры |
-| `canon_contract` | без пробелов/дефисов, верхний регистр |
+| `latinize` | кириллица-«двойники» → латиница (СХ → CX), полноширинные символы → обычные |
+| `norm_container` / `container_check_digit_ok` | без пробелов/дефисов, латиница; контрольная цифра ISO 6346 |
+| `norm_number` | `9 661`, `9661,00`, `1 234,56`, `1,234.56`, `0,00` → float |
+| `price_per_ton` | цена за т по единице (`kg`/`t`/`g`/`lb`), иначе запасной порог |
+| `norm_unit` | кг / 千克 / 035 → `kg`; т / 吨 / 070 → `t` |
+| `norm_hs`, `norm_decl`, `decl_is_lossy`, `ru_dt_date` | коды и номера деклараций (ДТ РФ `8/6/7`, 报关单 18 цифр, номер-«число» из Excel) |
+| `canon_contract`, `split_contracts` | контракт для сравнения (`ignore_chars`), деление склеенных |
+| `norm_incoterms` | → (условие, место): синонимы, китайские названия, коды 成交方式 |
+| `canon_model`, `norm_date`, `is_zero_or_blank`, `nearly_equal`, `has_mixed_scripts` | марки, даты, «0,00», допуски, смесь алфавитов |
 
-Все «расхождения форматов» чинятся здесь, один раз, для всех проверок.
+## 8. Курсы, журнал, прогоны, коннекторы
 
----
+- **`app/rates/`** — `get_rate`, `convert`, `refresh`, `list_rates`, `set_manual`, `delete_manual`,
+  `load_settings` / `save_settings`, `norm_currency`. Источники: `cbr` (ЦБ РФ), `cfets`
+  (центральный курс НБК), `china_customs` (месячная ручная таблица), `manual`. Кэш и ручные
+  курсы — `storage/rates/`, настройки — `config/rates.yaml`. Тесты — `tests/test_rates.py`.
+- **`app/journal.py`** — `log(kind, user, detail, meta)`; виды событий и подписи — `KINDS`;
+  `query(...)`, `export_csv(...)`. Новое событие = новый ключ в `KINDS`.
+- **`app/services/runs.py`** — номер прогона, отчёты в `storage/runs/<id>/`, копия последнего
+  отчёта в `storage/reports/`, история (`keep_runs`).
+- **`app/connectors/`** — `Connector.test(user)` / `pull(dest_dir, user)` (наследники реализуют
+  `_test` / `_pull`), `stage` = `ready` | `needs_access`, `params` для интерфейса, секреты через
+  `secret()` (`*_env`, `${VAR}`), `slot_rules`; `catalog()` — все типы. **`app/notify/`** —
+  `send(cfg, event, text, files, user)`, `test_channel`. Подробно — `docs/CONNECTORS.md`.
 
-## 7. Отчёты
+## 9. Отчёты
 
-- `report_excel.write_excel(result, cfg, path)` — SUMMARY/SOURCES/DATA_QUALITY
-  + лист на проверку; раскраска статусов и severity.
-- `report_pdf.write_pdf(result, cfg, path)` — reportlab, landscape A4; кириллица
-  через TTF (в Docker-образе ставится `fonts-dejavu-core`); в PDF идут только
-  ISSUE/REVIEW строки проверок (полные данные — в Excel).
+- `report_excel.write_excel(result, cfg, path)` — «Сводка», «Источники», «Качество данных»,
+  лист на проверку, «ДТ РФ», «报关单 КНР», «Курсы»; заголовки RU / ZH (`app/services/labels.py`);
+  значения, похожие на формулы, пишутся текстом (`safe_cell`).
+- `report_pdf.write_pdf(result, cfg, path)` — reportlab, A4 альбомная; латиница/кириллица —
+  DejaVu, иероглифы — CJK-шрифт с контурами TrueType (WenQuanYi, YaHei, SimSun, Arial Unicode),
+  текст делится на участки (`rich()`); колонки проверок для PDF — `PDF_COLUMNS`.
 
----
-
-## 8. Тестирование изменений
+## 10. Тестирование изменений
 
 ```bash
-# эталонный прогон на примерных данных — числа должны совпасть:
-python run_cli.py --wide data/wide_table.xlsx --purchase data/purchase.xlsx
-# ожидается: price 32 OK / 5 ISSUE; hs_code 33 OK / 22 REVIEW;
-#            incoterms 47 OK / 8 REVIEW; contracts 32 OK / 2 ISSUE / 3 REVIEW;
-#            DQ: 1 ERROR (extra_costs_value пустая)
+pip install -r requirements-dev.txt
+pytest                      # 164 теста: проверки (все случаи аудита), загрузка, XML, отчёты, API, курсы, коннекторы
+./verify.sh                 # эталон data/ + демо-набор data/demo/
 ```
 
-Изменили логику — сверьте с этим эталоном и объясните каждую разницу.
+Эталон на `data/` (2.0): цена 46 строк — 41 OK / 5 ISSUE; HS 51 — 33 OK / 18 REVIEW;
+условия 51 — 43 OK / 8 REVIEW; элементы 21 — 17 OK / 4 REVIEW; контракты 46 — 43 OK /
+0 ISSUE / 3 REVIEW; DQ — 1 ERROR. Изменили логику — сверьте с эталоном и объясните
+каждую разницу (пример — `docs/CHANGELOG.md`). Демо-набор пересоздаётся
+`python3 tools/make_demo.py` (только вымышленные данные).
 
-## 9. Структура каталогов
+## 11. Структура каталогов
 
 ```
-PostControl Suite/
-├── Dockerfile  docker-compose.yml  requirements.txt  README.md  run_cli.py
+SibDoc/
+├── Dockerfile  docker-compose.yml  requirements*.txt  README.md  run_cli.py  verify.sh
 ├── app/
 │   ├── server.py            FastAPI
 │   ├── models.py            Source / CheckOutput / Finding / Status
+│   ├── fields.py            единый словарь полей
 │   ├── normalizers.py       единая очистка значений
-│   ├── config_loader.py     system.yaml + rules/*.yaml (+ save_rules)
-│   ├── checks/              плагины проверок + реестр (__init__.py)
-│   └── services/            loader / data_quality / engine / report_excel / report_pdf
-├── config/
-│   ├── system.yaml          структура (разработчик)
-│   └── rules/*.yaml         параметры (специалист, через UI/API)
-├── references/              встроенные справочники (hs_codes.csv, declaration_elements.csv)
-├── data/                    примеры данных для эталонного прогона
-├── storage/reports/         отчёты
-├── webui/                   статический интерфейс
-└── docs/                    SPECIALIST_GUIDE / AGENT_GUIDE / DEPLOY
+│   ├── config_loader.py     system.yaml + rules/*.yaml (история версий, diff)
+│   ├── journal.py           журнал событий
+│   ├── security.py          пользователи и сессии (когда вход включён)
+│   ├── checks/              плагины проверок + реестр + _common.py
+│   ├── rates/               курсы валют
+│   ├── connectors/          коннекторы (первая очередь + задел)
+│   ├── notify/              уведомления WeCom / Telegram / почта
+│   └── services/            loader / xml_decl / data_quality / engine / runs / labels / report_* / OCR
+├── config/                  system.yaml, rules/, fields.yaml, xml_profiles.yaml, rates.yaml, scan_*.yaml
+├── references/              встроенные справочники
+├── data/                    эталонные данные + demo/ (вымышленные)
+├── tools/make_demo.py       генератор демо-набора
+├── tests/                   pytest
+├── storage/                 рабочие данные (не в git): uploads/, runs/, reports/, rates/, journal.jsonl
+├── webui/                   интерфейс (RU / EN / 中文)
+└── docs/                    SPECIALIST_GUIDE / CONNECTORS / DEPLOY / AGENT_GUIDE / USERS / CHANGELOG
 ```

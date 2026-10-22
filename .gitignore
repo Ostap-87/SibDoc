@@ -6,3 +6,5 @@ vendor/
 storage/*
 !storage/reports/.gitkeep
 !storage/uploads/.gitkeep
+.env
+.pytest_cache/

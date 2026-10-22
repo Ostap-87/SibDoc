@@ -1,5 +1,13 @@
 # Проверка цен (handbook, часть I)
-tolerance_abs: 0.01
-per_kg_threshold: 100          # цены ниже — считаем «за кг», умножаем на 1000
+tolerance_abs: 0.01            # допуск, в валюте цены за тонну
+tolerance_pct: 0               # дополнительный допуск в процентах (0 — только абсолютный)
+cd_price_unit: auto            # единица цены в декларации КНР: auto (из колонки единицы) | kg | t
+per_kg_threshold: 100          # запасное правило, если единицы нет: цена ниже порога — «за кг», ×1000
+match_scope: contract_first    # contract_first — строки SAP своего контракта, без них — любая строка контейнера (2.3.1)
+                               # any_line — любая строка контейнера (прежнее поведение); contract_only — только свой контракт
+currency_mismatch: convert     # convert — пересчёт по курсу (совпало -> REVIEW); issue — разные валюты = расхождение
+fx_tolerance_pct: 0.5          # допуск после пересчёта по курсу, %
+fx_side: cn                    # чей курс: cn — центральный курс НБК (CFETS), ru — курс ЦБ РФ
+report_sap_only: true          # показывать контейнеры, которые есть в SAP, но нет в декларациях
 bp_sea_contract_patterns: []   # контракты схемы BP SEA — исключаются (проверка раз в 6 мес.)
 escalation: "SISH finance / export teams / CN OL / SVS team"

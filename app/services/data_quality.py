@@ -14,7 +14,8 @@ affected_rows, examples, impact).
 import numpy as np
 import pandas as pd
 from app.models import Finding, Source
-from app.normalizers import norm_container, norm_price, norm_text
+from app.normalizers import (container_check_digit_ok, decl_is_lossy, has_mixed_scripts,
+                             norm_container, norm_price, norm_text)
 
 # Какие проверки зависят от каких колонок какого источника —
 # используется для поля impact ("на какую проверку влияет дефект").
@@ -40,6 +41,16 @@ CHECK_COLUMN_DEPS: dict[str, dict[str, list[str]]] = {
     "sap_vs_cd": {
         "decl_num": ["completeness"],
     },
+    "ru_dt": {
+        "decl_ru": ["cross_border"], "container": ["cross_border"], "contract": ["cross_border"],
+        "net_weight": ["cross_border"], "total_value": ["cross_border"], "hs_code": ["cross_border"],
+        "currency": ["cross_border"], "incoterms": ["cross_border"],
+    },
+    "cn_dec": {
+        "decl_cn": ["cross_border"], "container": ["cross_border"], "contract": ["cross_border"],
+        "net_weight": ["cross_border"], "unit_price": ["cross_border"], "hs_code": ["cross_border"],
+        "currency": ["cross_border"], "incoterms": ["cross_border"],
+    },
     "cd_drafts": {},
     "hs_reference": {
         "hs_code": ["hs_code"],
@@ -54,6 +65,7 @@ CHECK_TITLES = {
     "incoterms": "3. Incoterms",
     "decl_elements": "4. Decl. elements",
     "contracts": "5. Contract",
+    "cross_border": "6. ДТ ↔ 报关单 ↔ SAP",
 }
 
 # Ключи для поиска дублей
@@ -61,7 +73,17 @@ KEY_COLUMNS = {
     "wide_table": ["container_num", "decl_num"],
     "purchase": ["Container number"],
     "sap_vs_cd": ["decl_num"],
+    "ru_dt": ["decl_ru"],
+    "cn_dec": ["decl_cn"],
 }
+
+# Ключевые колонки, где проверяется смесь кириллицы/латиницы и контрольная цифра контейнера
+CONTAINER_COLUMNS = {"wide_table": ["container_num"], "purchase": ["Container number"],
+                     "ru_dt": ["container"], "cn_dec": ["container"]}
+MIXED_COLUMNS = {"wide_table": ["contract", "container_num"], "purchase": ["Main contract", "Add contract",
+                                                                          "Container number"],
+                 "ru_dt": ["contract", "container"], "cn_dec": ["contract", "container"]}
+DECL_COLUMNS = {"wide_table": ["decl_num"], "sap_vs_cd": ["decl_num"], "cn_dec": ["decl_cn"]}
 
 
 def _impact_for(source_slot: str, column: str) -> str:
@@ -151,7 +173,7 @@ def analyze(sources: dict[str, Source], cfg: dict) -> list[Finding]:
                     impact=_impact_for(slot, col)))
 
         # --- 4. Дубли ключей -------------------------------------------
-        if dq.get("duplicate_key_warning", True):
+        if dq.get("duplicate_key_warning", True) and slot not in ("ru_dt", "cn_dec"):
             for key_col in KEY_COLUMNS.get(slot, []):
                 if key_col not in df.columns:
                     continue
@@ -171,6 +193,50 @@ def analyze(sources: dict[str, Source], cfg: dict) -> list[Finding]:
                     issue=f"Дубли ключа «{key_col}»: {n_dup} уникальных значений встречаются >1 раза ({note})",
                     affected_rows=int(len(dup)),
                     examples="; ".join(sorted(dup.unique())[:max_ex])))
+
+        # --- 5. Контрольная цифра контейнера (ISO 6346) -------------------
+        if dq.get("container_check_digit", True):
+            for col in CONTAINER_COLUMNS.get(slot, []):
+                if col not in df.columns:
+                    continue
+                vals = [c for v in df[col].dropna() for c in str(v).replace(",", ";").split(";")]
+                vals = sorted({norm_container(v) for v in vals} - {""})
+                bad = [v for v in vals if not container_check_digit_ok(v)]
+                if bad:
+                    findings.append(Finding(
+                        severity="WARNING", source=slot, section="(ключи)", column=col,
+                        issue=f"Номер контейнера не проходит проверку контрольной цифры ISO 6346 "
+                              f"({len(bad)} из {len(vals)}) — возможна опечатка или ошибка распознавания",
+                        affected_rows=len(bad), examples="; ".join(bad[:max_ex]),
+                        impact=_impact_for(slot, col)))
+
+        # --- 6. Кириллица и латиница вперемешку в ключах -------------------
+        if dq.get("mixed_scripts_warning", True):
+            for col in MIXED_COLUMNS.get(slot, []):
+                if col not in df.columns:
+                    continue
+                mixed = df[col].dropna().map(str)
+                mixed = mixed[mixed.map(has_mixed_scripts)]
+                if len(mixed):
+                    findings.append(Finding(
+                        severity="INFO", source=slot, section="(ключи)", column=col,
+                        issue="В значениях смешаны кириллица и латиница (например, «СХ» и «CX») — "
+                              "при сверке они считаются одной буквой, но в источнике лучше исправить",
+                        affected_rows=int(len(mixed)), examples=_examples_of(mixed, max_ex),
+                        impact=_impact_for(slot, col)))
+
+        # --- 7. Номер декларации хранится числом (теряются последние цифры) --
+        for col in DECL_COLUMNS.get(slot, []):
+            if col in df.columns:
+                lossy = df[col].dropna()
+                lossy = lossy[lossy.map(decl_is_lossy)]
+                if len(lossy):
+                    findings.append(Finding(
+                        severity="WARNING", source=slot, section="(ключи)", column=col,
+                        issue="Номер декларации записан в Excel числом: в 18-значном номере могли "
+                              "потеряться последние цифры — храните номер как текст",
+                        affected_rows=int(len(lossy)), examples=_examples_of(lossy, max_ex),
+                        impact=_impact_for(slot, col)))
 
     order = {"ERROR": 0, "WARNING": 1, "INFO": 2}
     findings.sort(key=lambda f: (order.get(f.severity, 3), f.source, f.section, f.column))

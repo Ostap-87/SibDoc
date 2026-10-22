@@ -1,5 +1,8 @@
-# Проверка инкотермсов (handbook, часть III)
-qingdao_keywords: ["青岛", "qingdao"]
+# Проверка условий поставки (handbook, часть III)
+synonyms:                      # дополнительные синонимы (C&F = CFR и китайские названия уже встроены)
+  "C&F": CFR
+compare_place: false           # сверять ли место поставки (порт после условия: «CIF QINGDAO»)
+qingdao_keywords: ["青岛", "qingdao", "bza"]   # склад, на котором действует исключение 3.2.1
 qingdao_allowed:
   cd: "CIF"
-  sap: "C&F"
+  sap: "CFR"                   # C&F = CFR

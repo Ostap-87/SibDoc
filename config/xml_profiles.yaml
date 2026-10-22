@@ -1,0 +1,120 @@
+# ================================================================
+#  ПРОФИЛИ XML-ДЕКЛАРАЦИЙ
+#
+#  Как читать электронные декларации, которые присылают брокеры:
+#   - ДТ РФ в формате ФТС (ESADout_CU) — выгружается из программ брокеров
+#     («Альта-ГТД», «Контур.Декларант», «ВЭД-Декларант» и др.);
+#   - китайская декларация 报关单 (сообщение DecMessage: DecHead / DecList /
+#     DecContainers) — из системы брокера или «Единого окна».
+#
+#  Имена тегов — по открытым описаниям форматов. Версии схем и программы
+#  брокеров отличаются, поэтому на каждое поле можно указать несколько тегов
+#  (берётся первый найденный). Если на реальном файле какое-то поле не
+#  заполнилось — допишите сюда тег из файла; код менять не нужно.
+#  Пространства имён (cat_ru:, catESAD_cu: …) игнорируются.
+#
+#  header  — поля шапки (ищутся во всём документе вне товарных блоков)
+#  items   — тег товарного блока; поля внутри него
+#  containers — где искать номера контейнеров (в товаре или в шапке)
+#  presented_docs — документы (контракт = код вида документа 03011/03012)
+#  code_maps — перекодировки (коды валют/условий поставки/единиц)
+# ================================================================
+
+profiles:
+  ru_dt_fts:
+    slot: ru_dt
+    title: "ДТ РФ (XML ФТС, ESADout_CU)"
+    detect: [ESADout_CU, ESADout, ESADout_CUGoodsShipment]
+    header:
+      decl_ru_parts:            # номер ДТ: таможня / дата (ДДММГГ) / номер
+        customs: [CustomsCode]
+        date: [RegistrationDate]
+        number: [GTDNumber]
+        within: [GTDID, GTDNumber, DeclarationNumber, RegistrationNumber]
+      decl_ru: [DTNumber, DeclarationNumberFull]
+      decl_date: [RegistrationDate, DeclarationDate]
+      currency: [ContractCurrencyCode]
+      currency_rate: [ContractCurrencyRate]
+      total_value: [TotalInvoiceAmount]
+      incoterms: [DeliveryTermsStringCode]
+      delivery_place: [DeliveryPlace]
+      customs_office: [CustomsCode]
+      transport: [TransportIdentifier, TransportMeansRegId]
+      consignor:
+        path: [ESADout_CUConsignor, OrganizationName]
+      consignee:
+        path: [ESADout_CUConsignee, OrganizationName]
+      procedure: [CustomsModeCode, MainCustomsModeCode]
+      gross_weight_total: [TotalGrossWeight]
+    items:
+      tag: [ESADout_CUGoods]
+      fields:
+        item_no: [GoodsNumeric]
+        hs_code: [GoodsTNVEDCode]
+        product_name: {tags: [GoodsDescription], join: " "}
+        net_weight: [NetWeightQuantity]
+        gross_weight: [GrossWeightQuantity]
+        total_value: [InvoicedCost]
+        customs_value: [CustomsCost]
+        statistical_value: [StatisticalCost]
+        origin_country: [OriginCountryCode]
+        model: [GoodsModel, Model]
+        manufacturer: [Manufacturer]
+    containers:
+      tags: [ContainerIdentificaror, ContainerIdentificator, ContainerNumber, ContainerNum]
+      in_items: true            # сначала ищем в товарном блоке, потом в шапке
+    presented_docs:
+      tag: [ESADout_CUPresentedDocument, PresentedDocument]
+      code: [PresentedDocumentModeCode]
+      number: [PrDocumentNumber]
+      date: [PrDocumentDate]
+      contract_codes: ["03011", "03012"]
+    code_maps:
+      currency: {"156": CNY, "840": USD, "643": RUB, "978": EUR, "398": KZT}
+
+  cn_dec_message:
+    slot: cn_dec
+    title: "报关单 КНР (XML DecMessage)"
+    detect: [DecMessage, DecHead]
+    header:
+      decl_cn: [EntryId]
+      draft_num: [SeqNo, PreEntryId]
+      contract: [ContrNo]
+      incoterms: [TransMode]
+      decl_date: [DDate, DeclDate]
+      ie_date: [IEDate]
+      port: [IEPort, EntyPortCode]
+      customs_office: [CustomMaster]
+      bill_of_lading: [BillNo]
+      transport: [TrafName]
+      consignor: [ConsignorEname, ConsignorCname, OverseasConsignorEname]
+      consignee: [ConsigneeCname, TradeName, OwnerName]
+      net_weight_total: [NetWt]
+      gross_weight_total: [GrossWt]
+      freight: [FeeRate]
+      insurance: [InsurRate]
+      extra_costs: [OtherRate]
+      trade_country: [TradeCountry]
+    items:
+      tag: [DecList]
+      fields:
+        item_no: [GNo]
+        hs_code: [CodeTS]
+        product_name: [GName]
+        decl_elements: [GModel]
+        qty: [GQty]
+        unit: [GUnit]
+        unit_price: [DeclPrice]
+        total_value: [DeclTotal]
+        currency: [TradeCurr]
+        origin_country: [OriginCountry, OriginCountryCode]
+        first_qty: [FirstQty]
+        first_unit: [FirstUnit]
+    containers:
+      block: [DecContainer, Container]
+      tags: [ContainerId, ContainerNo]
+      goods_link: [GoodsNo]      # «1,2» — к каким товарам (项号) относится контейнер
+      in_items: false
+    code_maps:
+      currency: {"142": CNY, "502": USD, "300": EUR, "110": HKD, "116": JPY, "303": GBP}
+      unit: {"035": kg, "070": t, "036": g}

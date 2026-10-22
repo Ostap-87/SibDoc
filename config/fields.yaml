@@ -1,0 +1,310 @@
+# ================================================================
+#  ЕДИНЫЙ СЛОВАРЬ ПОЛЕЙ (RU / EN / ZH)
+#
+#  Каждое поле — одно понятие (контейнер, номер ДТ, вес нетто…) с подписями
+#  на трёх языках и списком синонимов: как эту колонку называют в выгрузках
+#  SAP, FineBI, программах брокеров РФ и Китая, а также теги XML ФТС
+#  (ESADout_CU) и китайского 报关单 (DecHead / DecList).
+#
+#  Новая выгрузка с другими названиями колонок подключается добавлением
+#  синонима сюда — без программиста. Сравнение названий не зависит от
+#  регистра, пробелов, знаков препинания и полноширинных символов.
+#
+#  type: text | number | date | code | currency | unit
+# ================================================================
+
+fields:
+  # ---------------------------------------------------- номера документов
+  decl_cn:
+    ru: "Номер 报关单 (海关编号)"
+    en: "CN customs declaration No."
+    zh: "海关编号"
+    type: code
+    synonyms: [decl_num, "海关编号", "报关单号", "报关单编号", "EntryId", "Entry ID",
+               "CD number", "customs declaration no", "Номер декларации КНР", "Декларация КНР"]
+  draft_num:
+    ru: "Номер черновика / предв. ввода"
+    en: "Draft / pre-entry No."
+    zh: "预录入编号"
+    type: code
+    synonyms: [draft_num, "预录入编号", "统一编号", "SeqNo", "PreEntryId", "Номер черновика"]
+  decl_ru:
+    ru: "Номер ДТ РФ"
+    en: "RU customs declaration (DT) No."
+    zh: "俄罗斯报关单号"
+    type: code
+    synonyms: ["Russian export decl", gtd_full, "Номер ДТ", "ДТ", "Номер декларации на товары",
+               "Регистрационный номер ДТ", "Рег. номер ДТ", "Номер ГТД", "ГТД", "GTD", "DT number",
+               "俄罗斯出口报关单", "俄罗斯报关单号"]
+  container:
+    ru: "Номер контейнера"
+    en: "Container No."
+    zh: "集装箱号"
+    type: code
+    synonyms: [container_num, "Container number", "Container No", "Container", "Контейнер",
+               "Номер контейнера", "№ контейнера", "Контейнеры", "集装箱号", "箱号", "集装箱编号",
+               "ContainerId", "ContainerIdentificaror", "ContainerIdentificator", "ContainerNumber"]
+  item_no:
+    ru: "№ товара"
+    en: "Item No."
+    zh: "项号"
+    type: code
+    synonyms: [products_item_number, "№ товара", "Номер товара", "Порядковый номер товара",
+               "项号", "商品序号", "GNo", "GoodsNumeric", "Item No"]
+  bill_of_lading:
+    ru: "Коносамент / накладная"
+    en: "Bill of lading / waybill"
+    zh: "提运单号"
+    type: code
+    synonyms: [bill_of_lading, "Коносамент", "Накладная", "提运单号", "提单号", "BillNo", "B/L"]
+
+  # ---------------------------------------------------- контракт
+  contract:
+    ru: "Контракт"
+    en: "Contract"
+    zh: "合同协议号"
+    type: code
+    synonyms: [contract, "Контракт", "Номер контракта", "№ контракта", "合同协议号", "合同号",
+               "ContrNo", "Contract No", "Contract number"]
+  main_contract:
+    ru: "Основной контракт"
+    en: "Main contract"
+    zh: "主合同号"
+    type: code
+    synonyms: ["Main contract", main_contract, "Основной контракт", "主合同号", "主合同"]
+  add_contract:
+    ru: "Доп. соглашение / приложение"
+    en: "Additional contract"
+    zh: "补充协议号"
+    type: code
+    synonyms: ["Add contract", add_contract, "Доп. соглашение", "Дополнительное соглашение",
+               "Приложение к контракту", "补充协议号", "补充协议"]
+  unk:
+    ru: "УНК (уникальный номер контракта)"
+    en: "Unique contract No. (UNK)"
+    zh: "合同唯一编号"
+    type: code
+    synonyms: ["УНК", "Уникальный номер контракта", "UNK"]
+
+  # ---------------------------------------------------- товар
+  material:
+    ru: "Материал SAP"
+    en: "SAP material"
+    zh: "SAP物料号"
+    type: code
+    synonyms: [Material, material, "Материал", "Код материала", "物料号", "物料", "Material code"]
+  hs_code:
+    ru: "Код ТН ВЭД / HS"
+    en: "HS code"
+    zh: "商品编号"
+    type: code
+    synonyms: [product_code, hs_code, "HS Code", "HS code", "Код ТН ВЭД", "ТН ВЭД", "Код товара",
+               "商品编号", "商品编码", "税则号列", "CodeTS", "GoodsTNVEDCode"]
+  product_name:
+    ru: "Наименование товара"
+    en: "Goods description"
+    zh: "商品名称"
+    type: text
+    synonyms: [product_name, "Наименование", "Наименование товара", "Описание товара",
+               "商品名称", "品名", "GName", "GoodsDescription", "Description"]
+  model:
+    ru: "Марка / модель"
+    en: "Grade / model"
+    zh: "申报型号"
+    type: text
+    synonyms: [declared_model, "Марка", "Модель", "Заявленная модель", "申报型号", "报关单申报型号",
+               "型号", "Grade", "Model"]
+  decl_elements:
+    ru: "Элементы декларации (申报要素)"
+    en: "Declaration elements / specs"
+    zh: "规格型号 (申报要素)"
+    type: text
+    synonyms: [products_specs_and_models, "规格型号", "申报要素", "GModel", "Specs and models",
+               "Элементы декларации"]
+  origin_country:
+    ru: "Страна происхождения"
+    en: "Country of origin"
+    zh: "原产国(地区)"
+    type: code
+    synonyms: [products_country_of_originregion, "Страна происхождения", "原产国", "原产国(地区)",
+               "OriginCountry", "OriginCountryCode"]
+
+  # ---------------------------------------------------- количество, вес
+  qty:
+    ru: "Количество"
+    en: "Quantity"
+    zh: "成交数量"
+    type: number
+    synonyms: [products_qty, "Количество", "Кол-во", "成交数量", "数量", "GQty", "Quantity"]
+  unit:
+    ru: "Единица измерения"
+    en: "Unit"
+    zh: "成交计量单位"
+    type: unit
+    synonyms: ["Единица", "Ед. изм.", "Единица измерения", "成交计量单位", "成交单位", "计量单位", "单位",
+               "GUnit", "Unit", "products_unit"]
+  net_weight:
+    ru: "Вес нетто"
+    en: "Net weight"
+    zh: "净重"
+    type: number
+    synonyms: [products_net_weight, "Net weight", "Вес нетто", "Вес нетто, кг", "Нетто", "净重",
+               "净重(千克)", "NetWt", "NetWeightQuantity"]
+  gross_weight:
+    ru: "Вес брутто"
+    en: "Gross weight"
+    zh: "毛重"
+    type: number
+    synonyms: ["Вес брутто", "Вес брутто, кг", "Брутто", "毛重", "毛重(千克)", "GrossWt",
+               "GrossWeightQuantity", "Gross weight"]
+  decl_total_net_weight:
+    ru: "Вес нетто по декларации, всего"
+    en: "Declaration total net weight"
+    zh: "报关单总净重"
+    type: number
+    synonyms: [decl_total_net_weight, "总净重"]
+
+  # ---------------------------------------------------- цена, стоимость, валюта
+  unit_price:
+    ru: "Цена за единицу (декларация)"
+    en: "Unit price (declaration)"
+    zh: "单价"
+    type: number
+    synonyms: [products_price, "Цена за единицу", "单价", "申报单价", "DeclPrice", "Unit price"]
+  total_value:
+    ru: "Стоимость товара"
+    en: "Total value"
+    zh: "总价"
+    type: number
+    synonyms: ["Стоимость", "Фактурная стоимость", "Стоимость товара", "总价", "申报总价",
+               "DeclTotal", "InvoicedCost", "Total value", "Amount"]
+  customs_value:
+    ru: "Таможенная стоимость"
+    en: "Customs value"
+    zh: "完税价格"
+    type: number
+    synonyms: ["Таможенная стоимость", "完税价格", "CustomsCost", "Customs value"]
+  statistical_value:
+    ru: "Статистическая стоимость, USD"
+    en: "Statistical value, USD"
+    zh: "统计价值(美元)"
+    type: number
+    synonyms: ["Статистическая стоимость", "StatisticalCost"]
+  currency:
+    ru: "Валюта"
+    en: "Currency"
+    zh: "币制"
+    type: currency
+    synonyms: [products_currency, Currency, "Валюта", "Валюта контракта", "Валюта цены",
+               "币制", "币种", "TradeCurr", "ContractCurrencyCode"]
+  sap_currency:
+    ru: "Валюта SAP"
+    en: "SAP currency"
+    zh: "SAP币制"
+    type: currency
+    synonyms: [currency_value, "SAP currency", "Валюта SAP"]
+  sap_price:
+    ru: "Цена SAP (за тонну)"
+    en: "SAP price (per t)"
+    zh: "SAP价格(每吨)"
+    type: number
+    synonyms: [Price, price, "Цена SAP", "Цена", "SAP price"]
+  freight:
+    ru: "Фрахт"
+    en: "Freight"
+    zh: "运费"
+    type: number
+    synonyms: [freight_value, "Фрахт", "运费", "FeeRate"]
+  insurance:
+    ru: "Страховка"
+    en: "Insurance"
+    zh: "保费"
+    type: number
+    synonyms: [insurance_value, "Страховка", "保费", "InsurRate"]
+  extra_costs:
+    ru: "Доп. расходы"
+    en: "Extra costs"
+    zh: "杂费"
+    type: number
+    synonyms: [extra_costs_value, "Доп. расходы", "Прочие расходы", "杂费", "OtherRate"]
+
+  # ---------------------------------------------------- условия, логистика
+  incoterms:
+    ru: "Условия поставки"
+    en: "Incoterms"
+    zh: "成交方式"
+    type: code
+    synonyms: [incoterms, Incoterms, "Инкотермс", "Условия поставки", "成交方式", "贸易术语",
+               "TransMode", "DeliveryTermsStringCode"]
+  sap_incoterms:
+    ru: "Условия поставки SAP"
+    en: "SAP incoterms"
+    zh: "SAP贸易术语"
+    type: code
+    synonyms: [shipreport_incoterms, "Incoterms SAP", "Условия поставки SAP"]
+  delivery_place:
+    ru: "Место поставки"
+    en: "Delivery place"
+    zh: "交货地点"
+    type: text
+    synonyms: ["Место поставки", "Пункт поставки", "交货地点", "DeliveryPlace"]
+  storage_location:
+    ru: "Склад / место хранения"
+    en: "Storage location"
+    zh: "存放地点"
+    type: text
+    synonyms: [storage_location, "Склад", "Место хранения", "货物存放地点", "存放地点"]
+  port:
+    ru: "Порт / пункт пропуска"
+    en: "Port / border point"
+    zh: "进出境口岸"
+    type: text
+    synonyms: [port_of_loading, entry_exit_port_customs, "Порт", "Пункт пропуска", "进境口岸",
+               "进出境口岸", "入境口岸", "IEPort", "EntyPortCode"]
+  customs_office:
+    ru: "Таможенный орган"
+    en: "Customs office"
+    zh: "申报地海关"
+    type: code
+    synonyms: [declared_customs, "Таможенный орган", "Таможня", "申报地海关", "CustomMaster", "CustomsCode"]
+  consignor:
+    ru: "Отправитель / экспортёр"
+    en: "Consignor / exporter"
+    zh: "境外发货人"
+    type: text
+    synonyms: [name_of_overseas_cosignee, "Отправитель", "Экспортёр", "境外发货人", "发货人",
+               "ConsignorEname", "ConsignorName"]
+  consignee:
+    ru: "Получатель / импортёр"
+    en: "Consignee / importer"
+    zh: "境内收发货人"
+    type: text
+    synonyms: [domestic_receiver, "Получатель", "Импортёр", "境内收发货人", "收货人", "ConsigneeCname",
+               "TradeName", "ConsigneeName"]
+  transport:
+    ru: "Транспортное средство / рейс"
+    en: "Vessel / transport"
+    zh: "运输工具名称"
+    type: text
+    synonyms: [ship_name, "Транспорт", "Судно", "运输工具名称", "TrafName"]
+
+  # ---------------------------------------------------- даты
+  decl_date:
+    ru: "Дата декларации"
+    en: "Declaration date"
+    zh: "申报日期"
+    type: date
+    synonyms: [declaration_dt, "Дата ДТ", "Дата декларации", "Дата регистрации ДТ", "申报日期",
+               "DDate", "RegistrationDate", "Declaration date"]
+  ie_date:
+    ru: "Дата ввоза / вывоза"
+    en: "Import / export date"
+    zh: "进出口日期"
+    type: date
+    synonyms: [import_export_dt, "Дата выпуска", "进出口日期", "IEDate"]
+  shipment_date:
+    ru: "Дата отгрузки"
+    en: "Shipment date"
+    zh: "发货日期"
+    type: date
+    synonyms: ["Shipment date", shipment_date, "Дата отгрузки", "发货日期", "装运日期"]

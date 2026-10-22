@@ -5,17 +5,18 @@
 # Можно добавлять свои паттерны (RU/EN/ZH) без изменения кода.
 # ================================================================
 fields:
-  decl_num:
-    - '(?:ДТ|декларац\w*\s+на\s+товар\w*)[ №:\-]*(\d{18,25})'
-    - '(?:declaration\s*(?:no\.?|number)|customs\s*decl\w*)[ №:\-]*(\d{18,25})'
-    - '(?:报关\s*单\s*号|海关\s*编号)[ №:\-：:]*(\d{18,25})'
-    - '\b(\d{22})\b'
+  decl_ru:                       # номер ДТ РФ: таможня (8) / дата ДДММГГ (6) / номер (7)
+    - '(\d{8}\s*/\s*\d{6}\s*/\s*[A-ZА-Я]?\d{7})'
+  decl_num:                      # номер 报关单 КНР: 18 цифр
+    - '(?:declaration\s*(?:no\.?|number)|customs\s*decl\w*)[ №:\-]*(\d{18})'
+    - '(?:报关\s*单\s*号|海关\s*编号)[ №:\-：:]*(\d{18})'
+    - '(?<![\d/])(\d{18})(?![\d/])'
   container_num:
     - '\b([A-ZА-Я]{4}\s?\d{7})\b'
   contract:
     - '(?:контракт|contract|合\s*同\s*号?)\s*(?:№|no\.?|N[°º])?\s*[:\-：]?\s*([A-ZА-ЯЁA-Z0-9\.\-_/]{4,40})'
   incoterms:
-    - '\b(CIF|C&F|CFR|FOB|C&I|EXW|DAP|DDP|FCA|CPT)\b'
+    - '\b(CIF|C&F|CFR|FOB|C&I|EXW|DAP|DDP|FCA|CPT|CIP|FAS|DPU)\b'
     - '(?:условия\s*поставки|terms\s*of\s*delivery|incoterms?|贸易术语|成交方式)\s*[:\-：]?\s*([A-Z&А-ЯЁ]{2,5})'
   hs_code:
     - '(?:код\s*ТН\s*ВЭД|код\s*TH\s*ВЭД|товарная\s*позиция)[ №:\-：:]*(\d[\d\s]{7,11}\d)'
@@ -50,3 +51,7 @@ ocr_fixes:
     CKR: CFR
     EXY: EXW
     EXV: EXW
+    ECA: FCA     # «F» прочитан как «E»
+    FGA: FCA
+    CPI: CPT
+    GPT: CPT

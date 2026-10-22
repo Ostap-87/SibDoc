@@ -90,7 +90,24 @@ uvicorn app.server:app --host 0.0.0.0 --port 8000
 ```bash
 docker exec postcontrol python run_cli.py \
   --wide data/wide_table.xlsx --purchase data/purchase.xlsx
-# ожидается: price 32 OK / 5 ISSUE; contracts 2 ISSUE; DQ: 1 ERROR
+# ожидается: «РЕЗУЛЬТАТ: ВСЁ СОВПАЛО» (эталон: цена 41 OK / 5 ISSUE, контракты 0 ISSUE, DQ: 1 ERROR; демо: 4 расхождения в сверке ДТ ↔ 报关单 ↔ SAP)
 ```
 
 Если числа совпали — установка корректна, можно работать.
+
+## 8. Что важно в версии 2.0
+
+- **Шрифты PDF:** для иероглифов нужен шрифт с контурами TrueType — в образе ставится
+  `fonts-wqy-zenhei`. Без Docker: Linux — `apt install fonts-wqy-zenhei`; Windows и macOS —
+  используются системные Microsoft YaHei / SimSun / Arial Unicode.
+- **Контейнер работает не от root** (пользователь `sibdoc`); писать он может только в
+  `storage/`, `config/rules/` и `config/rates.yaml`.
+- **Пароли коннекторов и уведомлений** — файл `.env` рядом с `docker-compose.yml`
+  (в git не попадает), например `SIBDOC_IMAP_PASSWORD=…`, `SIBDOC_WECOM_KEY=…`. В
+  `config/system.yaml` указываются только имена переменных (`password_env: …`).
+- **Курсы валют** скачиваются с `www.cbr.ru` и `www.chinamoney.com.cn` — откройте доступ к ним
+  или включите `offline: true` в `config/rates.yaml` и вводите курсы вручную.
+- **Размер файла** — до 100 МБ (`server.max_upload_mb`), **CORS** — `server.cors_origins`
+  (в рабочей установке укажите адрес сервера вместо `*`).
+- **Без интернета:** `pip download -r requirements.txt -d vendor` на машине с интернетом,
+  затем `install.sh` поставит всё из `vendor/`.

@@ -13,4 +13,9 @@ services:
       - ./references:/srv/postcontrol/references
       # сюда пишутся Excel/PDF-отчёты
       - ./storage:/srv/postcontrol/storage
+    # пароли и ключи коннекторов/уведомлений: файл .env рядом (в git не попадает),
+    # например SIBDOC_IMAP_PASSWORD=..., SIBDOC_WECOM_KEY=...
+    env_file:
+      - path: .env
+        required: false
     restart: unless-stopped

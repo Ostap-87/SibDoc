@@ -42,8 +42,14 @@ echo "[1/3] Создаю виртуальное окружение..."
 "$PY" -m venv .venv
 . .venv/bin/activate
 
-echo "[2/3] Устанавливаю зависимости (офлайн)..."
-pip install -q --no-index --find-links vendor -r requirements.txt
+if [ -d vendor ] && ls vendor/*.whl >/dev/null 2>&1; then
+    echo "[2/3] Устанавливаю зависимости (офлайн, из ./vendor)..."
+    pip install -q --no-index --find-links vendor -r requirements.txt
+else
+    echo "[2/3] Папки ./vendor нет — устанавливаю зависимости из интернета..."
+    echo "      (для установки без интернета соберите её заранее: pip download -r requirements.txt -d vendor)"
+    pip install -q -r requirements.txt
+fi
 
 echo "[3/3] Готово."
 echo

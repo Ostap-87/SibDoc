@@ -33,5 +33,5 @@ def run_check(check_id: str, sources: dict, rules: dict, cfg: dict) -> CheckOutp
 
 # встроенные проверки
 from app.checks import (  # noqa: E402,F401
-    completeness, price, hs_code, incoterms, decl_elements, contracts,
+    completeness, price, hs_code, incoterms, decl_elements, contracts, cross_border,
 )
