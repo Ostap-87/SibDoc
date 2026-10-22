@@ -29,8 +29,8 @@ echo "[1/4] Python: $PY ($("$PY" --version))"
 
 echo "[2/4] Устанавливаю зависимости (несколько минут, нужен интернет)…"
 "$PY" -m venv .venv
-./.venv/bin/python -m pip install -q --upgrade pip
-./.venv/bin/python -m pip install -q -r requirements.txt
+./.venv/bin/python -m pip install -q --timeout 60 --retries 10 --upgrade pip
+./.venv/bin/python -m pip install -q --timeout 60 --retries 10 -r requirements.txt
 
 echo "[3/4] Распознавание сканов (Tesseract) — необязательно"
 if command -v tesseract >/dev/null 2>&1; then
