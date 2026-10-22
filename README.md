@@ -8,6 +8,8 @@
 **На Mac (окно приложения):** скачайте репозиторий (Code → Download ZIP), распакуйте и в Терминале
 выполните `bash ~/Downloads/sibdoc-main/install_mac.command` — появится приложение «SibDoc» в
 ~/Applications (Launchpad, Dock). Нужен Python 3.11+ с python.org; установщик подскажет.
+Если pypi.org отвечает медленно (Китай, часть сетей в России), установщик сам берёт библиотеки с зеркала
+(Цинхуа или Alibaba); своё зеркало: `PIP_INDEX_URL=<адрес> bash install_mac.command`.
 В браузере вместо окна: `start_mac.command`.
 
 **Запуск:** `pip install -r requirements.txt && uvicorn app.server:app --port 8000` → http://localhost:8000
