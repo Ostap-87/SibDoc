@@ -8,3 +8,5 @@ storage/*
 !storage/uploads/.gitkeep
 .env
 .pytest_cache/
+.ocr/
+.ocr-tmp/

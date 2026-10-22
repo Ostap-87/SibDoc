@@ -10,6 +10,7 @@
 | `cn_dec_demo.xlsx` | те же 报关单 таблицей с китайскими заголовками |
 | `wide_table_demo.xlsx`, `purchase_demo.xlsx` | wide table и SAP |
 | `sap_vs_cd_demo.csv` | ручная таблица (Windows-1251, разделитель «;») |
+| `scans/` | сканы для блока «Сканы деклараций»: ДТ …0000002 (PNG), 报关单 …0102 (JPG), ДТ …0000004 (PDF без текстового слоя); `python3 tools/make_demo_scans.py` |
 
 Заложенные расхождения:
 1. ДТ …0000001 — всё совпадает.

@@ -11,6 +11,18 @@
 Если pypi.org отвечает медленно (Китай, часть сетей в России), установщик сам берёт библиотеки с зеркала
 (Цинхуа или Alibaba); своё зеркало: `PIP_INDEX_URL=<адрес> bash install_mac.command`.
 В браузере вместо окна: `start_mac.command`.
+Установщик кладёт значок «SibDoc» на рабочий стол и ставит распознавание сканов (Tesseract) готовой сборкой
+conda-forge в папку `.ocr` (~200 МБ, без Homebrew; отдельно — `bash install_ocr_mac.command`).
+Обновить уже установленный SibDoc (папка на рабочем столе, `.venv` и `.ocr` сохраняются):
+
+```bash
+cd ~/Desktop/sibdoc-main && curl -fsSL https://codeload.github.com/Ostap-87/SibDoc/tar.gz/refs/heads/main \
+  | tar -xzf - --strip-components=1 && bash install_mac.command
+```
+
+**Сканы деклараций (OCR):** PNG/JPG/TIFF/PDF-сканы ДТ и 报关单 на русском, английском и китайском;
+демо — `data/demo/scans/` (`python3 tools/make_demo_scans.py`). Tesseract ищется в `SIBDOC_TESSERACT`, `.ocr/bin`,
+PATH, Homebrew, MacPorts; языки — из папки `tessdata` программы (rus, eng, chi_sim).
 
 **Запуск:** `pip install -r requirements.txt && uvicorn app.server:app --port 8000` → http://localhost:8000
 (или `docker compose up -d`). Вход выключен (прототип): `config/system.yaml → auth.disabled`.

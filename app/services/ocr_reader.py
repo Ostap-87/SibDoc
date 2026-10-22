@@ -15,6 +15,12 @@ from __future__ import annotations
   1) TESSDATA_PREFIX (если задан)
   2) <project>/tessdata          (поставляется в пакете)
   3) системный tessdata
+
+Сама программа tesseract ищется в:
+  1) SIBDOC_TESSERACT (путь к бинарнику, если задан)
+  2) <project>/.ocr/bin/tesseract  (ставит install_ocr_mac.command, сборка conda-forge)
+  3) PATH и обычные места Homebrew / MacPorts / Windows — у приложения, открытого из Finder,
+     PATH урезан (/usr/bin:/bin), поэтому /opt/homebrew/bin и /usr/local/bin проверяются явно
 """
 import io
 import os
@@ -28,6 +34,33 @@ PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..
 LOCAL_TESSDATA = os.path.join(PROJECT_ROOT, "tessdata")
 
 LANGS = "rus+eng+chi_sim"
+
+TESSERACT_PLACES = (
+    os.path.join(PROJECT_ROOT, ".ocr", "bin", "tesseract"),
+    os.path.join(PROJECT_ROOT, ".ocr", "Library", "bin", "tesseract.exe"),
+    "/opt/homebrew/bin/tesseract",
+    "/usr/local/bin/tesseract",
+    "/opt/local/bin/tesseract",
+    r"C:\Program Files\Tesseract-OCR\tesseract.exe",
+)
+
+
+def tesseract_cmd() -> str | None:
+    """Путь к бинарнику tesseract (см. порядок поиска выше) или None."""
+    env = os.environ.get("SIBDOC_TESSERACT")
+    if env and os.path.isfile(env):
+        return env
+    places = list(TESSERACT_PLACES[:2]) + [shutil.which("tesseract")] + list(TESSERACT_PLACES[2:])
+    for p in places:
+        if p and os.path.isfile(p) and os.access(p, os.X_OK):
+            return p
+    return None
+
+
+def _use_tesseract() -> None:
+    cmd = tesseract_cmd()
+    if cmd:
+        pytesseract.pytesseract.tesseract_cmd = cmd
 
 
 def _tessdata_dir() -> str | None:
@@ -44,6 +77,7 @@ def available_languages() -> list[str]:
     td = _tessdata_dir()
     if td:
         cfg = f'--tessdata-dir "{td}"'
+    _use_tesseract()
     try:
         out = pytesseract.get_languages(config=cfg)
         have = set(out)
@@ -90,8 +124,8 @@ def _image_pages(fileobj) -> list:
 
 
 def tesseract_available() -> bool:
-    """Установлен ли системный бинарник tesseract."""
-    return shutil.which("tesseract") is not None
+    """Есть ли бинарник tesseract (в .ocr программы, в PATH или в обычных местах)."""
+    return tesseract_cmd() is not None
 
 
 def read_scan(fileobj, filename: str) -> dict:
@@ -102,7 +136,8 @@ def read_scan(fileobj, filename: str) -> dict:
     if need_ocr and not tesseract_available():
         raise RuntimeError(
             "Tesseract OCR не найден в системе / Tesseract OCR not found / 未找到Tesseract OCR. "
-            "Установите tesseract-ocr (см. README.md §OCR) — остальные функции работают без него.")
+            "Установите его: Mac — bash install_ocr_mac.command, остальные — README.md §OCR. "
+            "Остальные функции работают без него.")
 
     texts, text_layer = [], 0
     for img in pages:
