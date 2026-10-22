@@ -1,0 +1,3 @@
+# Проверка полноты (handbook, шаг 1.3)
+direction: both                # both | wide_to_manual | manual_to_wide
+max_listed: 50                 # сколько номеров CD показывать в отчёте

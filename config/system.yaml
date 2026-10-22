@@ -1,0 +1,167 @@
+# ================================================================
+#  PostControl Suite — системная конфигурация
+#  Здесь описываются источники данных, маппинг колонок,
+#  параметры проверок и секции для data-quality детекции.
+#  Правила проверок, которые меняются чаще, — в config/rules/*.yaml
+# ================================================================
+
+product:
+  name: "PostControl Suite"
+  handbook: "Post Control Report Handbook, June 2026"
+
+# ----------------------------------------------------------------
+# ИСТОЧНИКИ ДАННЫХ (слоты загрузки)
+# required_columns — используются DQ-детекцией: отсутствие колонки
+# = ERROR с указанием, какая проверка пострадает.
+# ----------------------------------------------------------------
+sources:
+  wide_table:
+    label: "Wide table (CD data, FineBI Widetable)"
+    required: true
+    sections:                       # секции/блоки данных внутри источника
+      declaration: [decl_num, contract, incoterms, decl_issue_status]
+      product:     [product_code, product_name, products_price, products_net_weight]
+      sap_link:    [container_num, shipreport_incoterms, extra_costs_value, storage_location]
+    required_columns: [decl_num, container_num, contract, incoterms,
+                       shipreport_incoterms, extra_costs_value, product_code,
+                       product_name, material, products_price,
+                       products_net_weight, storage_location, decl_issue_status]
+
+  purchase:
+    label: "Purchase (SAP data, FineBI Purchase)"
+    required: true
+    sections:
+      main: ["Container number", "Price", "Main contract", "Add contract",
+             "Net weight", "Russian export decl"]
+    required_columns: ["Container number", "Price", "Main contract",
+                       "Add contract", "Net weight"]
+
+  sap_vs_cd:
+    label: "SAP vs CD (ручная сводная таблица)"
+    required: false
+    sections:
+      main: [decl_num]
+    required_columns: [decl_num]
+
+  cd_drafts:
+    label: "Черновики деклараций"
+    required: false
+    sections: {}
+    required_columns: []
+
+  hs_reference:
+    label: "Справочник HS-кодов (грейд/завод/код)"
+    required: false
+    builtin: "references/hs_codes.csv"     # встроенный файл, если не загружен
+    sections:
+      main: [hs_code]
+    required_columns: [hs_code]
+
+  cde_reference:
+    label: "Справочник элементов декларации"
+    required: false
+    builtin: "references/declaration_elements.csv"
+    sections: {}
+    required_columns: []
+
+# ----------------------------------------------------------------
+# ПРОВЕРКИ (вкл/выкл + ссылка на файл правил)
+# Параметры, которые может менять специалист без программиста, —
+# в config/rules/*.yaml (редактируются также через API/UI).
+# ----------------------------------------------------------------
+checks:
+  completeness:    {enabled: true, rules: "completeness.yaml"}
+  price:           {enabled: true, rules: "price.yaml"}
+  hs_code:         {enabled: true, rules: "hs_code.yaml"}
+  incoterms:       {enabled: true, rules: "incoterms.yaml"}
+  decl_elements:   {enabled: true, rules: "decl_elements.yaml"}
+  contracts:       {enabled: true, rules: "contracts.yaml"}
+
+# ----------------------------------------------------------------
+# DATA-QUALITY ДЕТЕКЦИЯ
+# ----------------------------------------------------------------
+data_quality:
+  enabled: true
+  empty_column_threshold: 0.95     # колонка пуста, если >=95% значений пустые
+  sparse_column_threshold: 0.30    # колонка "редкая", если заполнена <30%
+  duplicate_key_warning: true      # предупреждать о дублях ключей (контейнер/CD)
+  numeric_columns:                 # где ожидаются числа — детектим текст/мусор
+    wide_table: [products_price, products_net_weight]
+    purchase: ["Price", "Net weight"]
+
+# ----------------------------------------------------------------
+# ВЫВОД
+# ----------------------------------------------------------------
+output:
+  dir: "storage/reports"
+  excel_name: "post_control_report.xlsx"
+  pdf_name: "post_control_report.pdf"
+  max_examples_per_finding: 5
+
+# ----------------------------------------------------------------
+# УЧЁТНЫЕ ЗАПИСИ. По умолчанию локальный вход: admin/admin
+# (смените пароль после первого входа: раздел «Пользователи»).
+#
+# Корпоративный вход по почте (Microsoft Entra ID / OIDC) — ВЫКЛЮЧЕН,
+# готов к включению (инструкция: docs/USERS.md). Пример блока:
+# auth:
+#   mode: corporate_sso          # local | corporate_sso
+#   provider: entra_id           # entra_id | oidc_generic
+#   issuer_url: "https://login.microsoftonline.com/<tenant-id>/v2.0"
+#   client_id: "..."
+#   client_secret: "..."
+#   redirect_uri: "https://sibdoc.example.ru/api/auth/sso/callback"
+#   allowed_domain: "example.ru" # только корпоративные почты этого домена
+
+# ----------------------------------------------------------------
+# КОННЕКТОРЫ ИСТОЧНИКОВ. Кнопка «Обновить данные» опрашивает все
+# enabled: true коннекторы и перечитывает файлы. По умолчанию все
+# выключены — заполните параметры и поставьте enabled: true.
+# Кнопка «Проверить» в интерфейсе тестирует соединение без загрузки.
+connectors:
+  incoming_folder:
+    type: folder
+    enabled: false
+    label: Папка с выгрузками
+    # path: /data/incoming          # путь на сервере, куда кладутся новые Excel/CSV
+    # pattern: "*.xlsx"
+    # slots: [wide_table, purchase] # маппинг по имени файла
+
+  sftp_sibur:
+    type: sftp
+    enabled: false
+    label: SFTP (корпоративный)
+    # host: sftp.example.ru
+    # port: 22
+    # username: svc_sibdoc
+    # password: ""                  # или key_file (ключ предпочтительнее)
+    # key_file: ""
+    # remote_dir: /uploads/sibdoc
+    # pattern: "*.xlsx"
+    # slots: [wide_table, purchase]
+
+  finebi_db:
+    type: database
+    enabled: false
+    label: БД FineBI
+    # url: "mssql+pyodbc://USER:PASS@server:1433/DB?driver=ODBC+Driver+18+for+SQL+Server&Encrypt=yes"
+    # queries:                      # слот: SQL-запрос
+    #   wide_table: "SELECT * FROM v_wide_table"
+    #   purchase:   "SELECT * FROM v_purchase"
+
+  sap_s4:
+    type: sap_odata
+    enabled: false
+    label: SAP S/4HANA (OData)
+    # base_url: "https://sap.example.ru:44300/sap/opu/odata/sap/API_PURCHASEORDER_0001"
+    # entity: "A_PurchaseOrderItem"
+    # params: {"$top": "50000"}
+    # auth: basic                   # basic | oauth2
+    # username: ""
+    # password: ""
+    # verify_tls: true
+    # slots: [purchase]
+
+# вход без пароля (false = вход по логину/паролю)
+auth:
+  disabled: true

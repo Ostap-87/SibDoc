@@ -1,0 +1,16 @@
+# Опционально: запуск одной командой `docker compose up -d`.
+# Тот же результат даёт обычный `docker run` (см. docs/DEPLOY.md).
+services:
+  postcontrol:
+    build: .
+    container_name: postcontrol-suite
+    ports:
+      - "8000:8000"
+    volumes:
+      # конфигурация и правила — редактируются на сервере без пересборки
+      - ./config:/srv/postcontrol/config
+      # справочники (HS-коды, элементы декларации)
+      - ./references:/srv/postcontrol/references
+      # сюда пишутся Excel/PDF-отчёты
+      - ./storage:/srv/postcontrol/storage
+    restart: unless-stopped

@@ -1,0 +1,3 @@
+# Проверка HS-кодов (handbook, часть II)
+normalize_digits: true
+family_prefix_len: 6           # совпадение первых N знаков = REVIEW (семейство, другой суффикс)

@@ -1,0 +1,2 @@
+# Сверка контрактов CD vs SAP (main + add contract)
+ignore_chars: ' \-–—'

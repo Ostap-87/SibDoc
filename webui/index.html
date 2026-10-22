@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PostControl Suite</title>
+<style>
+  :root{
+    --blue:#1A56DB; --blue-d:#1242a8; --bg:#f4f6fa; --card:#fff; --line:#e3e8f0;
+    --ok:#0a7a30; --ok-bg:#c6efce; --issue:#b00020; --issue-bg:#ffc7ce;
+    --review:#8a6100; --review-bg:#ffeb9c; --skip:#555; --skip-bg:#d9d9d9;
+    --warn-bg:#ffeb9c; --info-bg:#ddebF7; --text:#1c2333;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Segoe UI",Arial,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+  header{background:var(--blue);color:#fff;padding:14px 24px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  header h1{font-size:18px;font-weight:600}
+  header .sub{opacity:.85;font-size:12px}
+  header .spacer{flex:1}
+  .lang{display:flex;gap:4px}
+  .lang button{background:#ffffff22;color:#fff;border:1px solid #ffffff55;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:13px;font-weight:600}
+  .lang button.active{background:#fff;color:var(--blue)}
+  .wrap{max-width:1280px;margin:0 auto;padding:20px 24px 60px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin-bottom:18px}
+  .card h2{font-size:15px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+  .step{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--blue);color:#fff;font-size:12px}
+  .slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:12px}
+  .slot{border:2px dashed var(--line);border-radius:8px;padding:12px;transition:.15s}
+  .slot.loaded{border-style:solid;border-color:var(--ok-bg);background:#f4fbf5}
+  .slot .lab{font-weight:600;font-size:13px;margin-bottom:4px}
+  .slot .meta{font-size:12px;color:#667;margin-bottom:8px}
+  .slot input[type=file]{font-size:12px;width:100%}
+  .badge{display:inline-block;padding:1px 8px;border-radius:10px;font-size:11px;font-weight:600}
+  .b-req{background:#ffe3e6;color:#a3001e}
+  .b-opt{background:#e8edf5;color:#445}
+  .b-ok{background:var(--ok-bg);color:var(--ok)}
+  .b-builtin{background:#e5e0f5;color:#5a3fa8}
+  .btn{background:var(--blue);color:#fff;border:0;border-radius:8px;padding:11px 26px;font-size:15px;font-weight:600;cursor:pointer}
+  .btn:hover{background:var(--blue-d)}
+  .btn:disabled{opacity:.5;cursor:default}
+  .btn.ghost{background:#fff;color:var(--blue);border:1px solid var(--blue)}
+  .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .stat{flex:1;min-width:130px;border:1px solid var(--line);border-radius:8px;padding:10px 14px;text-align:center}
+  .stat .n{font-size:24px;font-weight:700}
+  .stat .l{font-size:11px;color:#667;text-transform:uppercase;letter-spacing:.5px}
+  .n-ok{color:var(--ok)} .n-issue{color:var(--issue)} .n-review{color:var(--review)} .n-dq{color:#b3541e}
+  table{border-collapse:collapse;width:100%;font-size:12.5px}
+  th,td{border:1px solid var(--line);padding:5px 8px;text-align:left;vertical-align:top}
+  th{background:var(--blue);color:#fff;position:sticky;top:0}
+  tr:nth-child(even) td{background:#f7f9fc}
+  .st{font-weight:700;padding:1px 7px;border-radius:9px;font-size:11px;white-space:nowrap}
+  .st-OK{background:var(--ok-bg);color:var(--ok)} .st-ISSUE{background:var(--issue-bg);color:var(--issue)}
+  .st-REVIEW{background:var(--review-bg);color:var(--review)} .st-SKIPPED{background:var(--skip-bg);color:var(--skip)}
+  .st-ERROR{background:var(--issue-bg);color:var(--issue)} .st-WARNING{background:var(--warn-bg);color:var(--review)}
+  .st-INFO{background:var(--info-bg);color:#1f4e79}
+  .st-found{background:var(--ok-bg);color:var(--ok)} .st-missing{background:var(--issue-bg);color:var(--issue)}
+  .st-review{background:var(--review-bg);color:var(--review)}
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+  .tab{border:1px solid var(--line);background:#fff;border-radius:7px;padding:6px 12px;cursor:pointer;font-size:12.5px}
+  .tab.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+  .tbl-wrap{max-height:440px;overflow:auto;border:1px solid var(--line);border-radius:8px}
+  .dq-group{margin-bottom:10px}
+  .dq-group h3{font-size:13px;margin:8px 0 4px;color:var(--blue-d)}
+  .muted{color:#667;font-size:12px}
+  textarea{width:100%;min-height:200px;font-family:Consolas,monospace;font-size:12.5px;border:1px solid var(--line);border-radius:8px;padding:10px}
+  select{border:1px solid var(--line);border-radius:7px;padding:7px 10px;font-size:13px}
+  .hidden{display:none}
+  .scan-drop{border:2px dashed var(--blue);border-radius:8px;padding:18px;text-align:center;background:#f8faff;cursor:pointer}
+  .scan-drop:hover{background:#eef4ff}
+  .scan-file{border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:8px}
+  .scan-file h4{font-size:13px;margin-bottom:6px}
+  .scan-file .excerpt{font-family:Consolas,monospace;font-size:11px;color:#556;background:#f6f8fb;border-radius:6px;padding:6px;margin-top:6px;white-space:pre-wrap;max-height:90px;overflow:auto}
+  .fld{display:inline-block;margin:2px 4px 2px 0;padding:2px 8px;border-radius:8px;font-size:12px;border:1px solid var(--line)}
+  .fld-found{background:var(--ok-bg)} .fld-review{background:var(--review-bg)} .fld-missing{background:var(--issue-bg)}
+  #toast{position:fixed;right:20px;bottom:20px;background:#222;color:#fff;padding:10px 16px;border-radius:8px;opacity:0;transition:.3s;font-size:13px}
+  /* вход */
+  #loginOverlay{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:50}
+  .login-card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:28px 32px;width:360px;box-shadow:0 8px 30px rgba(0,0,0,.08)}
+  .login-card h1{font-size:20px;margin-bottom:4px;color:var(--blue)}
+  .login-card input{width:100%;border:1px solid var(--line);border-radius:8px;padding:10px;font-size:14px;margin:6px 0}
+  .login-err{color:var(--issue);font-size:12px;min-height:16px}
+  /* пользователь в шапке */
+  .uchip{display:flex;gap:8px;align-items:center;background:#ffffff22;border:1px solid #ffffff55;border-radius:8px;padding:5px 10px;font-size:12.5px}
+  .uchip button{background:#fff;color:var(--blue);border:0;border-radius:6px;padding:3px 10px;cursor:pointer;font-size:12px;font-weight:600}
+  /* коннекторы */
+  .conn{border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:8px;background:#fbfcfe}
+  .conn .row{margin-top:0}
+  /* календарь журнала */
+  .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;max-width:420px;min-width:300px}
+  .cal .hd{text-align:center;font-size:11px;color:#667;padding:4px 0}
+  .cal .d{border:1px solid var(--line);border-radius:6px;padding:5px 2px;text-align:center;cursor:pointer;font-size:12px;min-height:38px;background:#fff}
+  .cal .d:hover{background:#eef4ff}
+  .cal .d.sel{background:var(--blue);color:#fff}
+  .cal .d.off{opacity:.3;cursor:default;border-style:dashed}
+  .cal .cnt{display:block;font-size:10px;color:var(--blue-d);margin-top:2px}
+  .cal .d.sel .cnt{color:#fff}
+  .jsearch{flex:1;min-width:200px;border:1px solid var(--line);border-radius:8px;padding:8px;font-size:13px}
+</style>
+</head>
+<body>
+<header>
+  <h1>SibDoc</h1>
+  <span class="sub" data-i18n="tagline"></span>
+  <span class="spacer"></span>
+  <div class="uchip hidden" id="userChip">
+    <span id="userName"></span>
+    <button onclick="logout()" data-i18n="logout"></button>
+  </div>
+  <div class="lang">
+    <button data-lang="ru" onclick="setLang('ru')">RU</button>
+    <button data-lang="en" onclick="setLang('en')">EN</button>
+    <button data-lang="zh" onclick="setLang('zh')">中文</button>
+  </div>
+</header>
+<div class="wrap">
+
+  <div class="card">
+    <h2><span class="step">1</span> <span data-i18n="step1"></span></h2>
+    <div class="slots" id="slots"></div>
+    <div class="row" style="margin-top:10px">
+      <button class="btn ghost" onclick="reloadData()" data-i18n="reload_btn"></button>
+      <span class="muted" id="reloadInfo"></span>
+    </div>
+    <div id="connBox" style="margin-top:12px"></div>
+    <p class="muted" style="margin-top:8px" data-i18n="builtin_note"></p>
+  </div>
+
+  <div class="card">
+    <h2><span class="step">1.5</span> <span data-i18n="scan_title"></span></h2>
+    <p class="muted" style="margin-bottom:10px" data-i18n="scan_hint"></p>
+    <div class="row">
+      <div class="scan-drop" style="flex:1" onclick="document.getElementById('scanInput').click()">
+        <span data-i18n="scan_drop"></span>
+        <input type="file" id="scanInput" multiple accept=".pdf,.jpg,.jpeg,.png,.tif,.tiff,.bmp" style="display:none">
+      </div>
+      <button class="btn ghost" onclick="uploadScans()" data-i18n="scan_upload_btn"></button>
+      <button class="btn ghost" onclick="clearScans()" data-i18n="scan_clear_btn"></button>
+      <a class="btn ghost hidden" id="scanExcel" href="/api/scans/excel" data-i18n="scan_excel_btn"></a>
+    </div>
+    <div id="scanList" style="margin-top:12px"></div>
+    <div id="scanPreviewWrap" class="hidden" style="margin-top:12px">
+      <h3 style="font-size:13px;margin-bottom:6px" data-i18n="scan_preview_title"></h3>
+      <div class="tbl-wrap"><table id="scanPreview"></table></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span class="step">2</span> <span data-i18n="step2"></span> <span class="muted" data-i18n="step2_note"></span></h2>
+    <div class="row">
+      <select id="ruleSel"></select>
+      <button class="btn ghost" onclick="loadRule()" data-i18n="load_btn"></button>
+      <button class="btn ghost" onclick="saveRule()" data-i18n="save_btn"></button>
+    </div>
+    <div style="margin-top:10px"><textarea id="ruleText" data-i18n-ph="rule_ph"></textarea></div>
+  </div>
+
+  <div class="card">
+    <h2><span class="step">3</span> <span data-i18n="step3"></span></h2>
+    <div class="row">
+      <button class="btn" id="runBtn" onclick="runAll()" data-i18n="run_btn"></button>
+      <a class="btn ghost hidden" id="dlExcel" href="/api/report/excel" data-i18n="dl_excel"></a>
+      <a class="btn ghost hidden" id="dlPdf" href="/api/report/pdf" data-i18n="dl_pdf"></a>
+      <span class="muted" id="runInfo"></span>
+    </div>
+  </div>
+
+  <div class="card hidden" id="sumCard">
+    <h2 data-i18n="summary"></h2>
+    <div class="row" id="stats"></div>
+    <div style="margin-top:14px" class="tbl-wrap"><table id="sumTbl"></table></div>
+  </div>
+
+  <div class="card hidden" id="dqCard">
+    <h2 data-i18n="dq_title"></h2>
+    <div id="dqBody"></div>
+  </div>
+
+  <div class="card hidden" id="resCard">
+    <h2 data-i18n="results"></h2>
+    <div class="tabs" id="tabs"></div>
+    <div class="tbl-wrap"><table id="resTbl"></table></div>
+  </div>
+
+  <div class="card" id="journalCard">
+    <h2 data-i18n="journal_title"></h2>
+    <div class="row" style="margin-bottom:10px">
+      <button class="btn ghost" onclick="calMove(-1)">&#8249;</button>
+      <b id="calTitle"></b>
+      <button class="btn ghost" onclick="calMove(1)">&#8250;</button>
+      <input type="text" id="jSearch" class="jsearch" oninput="renderJournal()" data-i18n-ph="journal_search">
+      <button class="btn ghost" onclick="journalClearDay()" data-i18n="journal_all"></button>
+    </div>
+    <div class="row" style="align-items:flex-start">
+      <div class="cal" id="cal"></div>
+      <div style="flex:1;min-width:380px" class="tbl-wrap"><table id="jTbl"></table></div>
+    </div>
+  </div>
+
+  <div class="card hidden" id="usersCard">
+    <h2 data-i18n="users_title"></h2>
+    <div class="row" style="margin-bottom:10px">
+      <input id="uLogin" data-i18n-ph="users_login" class="jsearch" style="min-width:140px;flex:none">
+      <input id="uPass" type="password" data-i18n-ph="users_pass" class="jsearch" style="min-width:140px;flex:none">
+      <select id="uRole"><option value="operator">operator</option><option value="admin">admin</option></select>
+      <button class="btn ghost" onclick="addUser()" data-i18n="users_add"></button>
+    </div>
+    <div class="tbl-wrap"><table id="uTbl"></table></div>
+  </div>
+
+</div>
+<div id="toast"></div>
+
+<script>
+// ============================== i18n ==============================
+const I18N = {
+  ru: {
+    tagline:"проверка импортных деклараций CD vs SAP · data-quality детекция · Excel/PDF отчёты",
+    step1:"Загрузка данных", builtin_note:"Справочники HS-кодов и элементов декларации подставляются автоматически (builtin), если не загружены.",
+    required:"обязательный", optional:"опциональный", loaded_f:"загружен", rows:"строк", upload:"Загрузить",
+    scan_title:"Сканированные декларации (OCR)",
+    scan_hint:"Загрузите сканы (PDF/JPG/PNG/TIFF) — система распознает текст на русском, английском и китайском и извлечёт параметры из нужных секций документа.",
+    scan_drop:"Выберите файлы сканов (можно несколько сразу)",
+    scan_upload_btn:"Распознать", scan_clear_btn:"Очистить", scan_excel_btn:"Excel предпросмотра",
+    scan_preview_title:"Предварительная проверка: извлечённые данные (как лягут в Excel)",
+    field:"поле", value:"значение", status:"статус", file:"файл", pages:"стр.",
+    step2:"Параметры проверок", step2_note:"(редактируются без программиста и без рестарта)",
+    load_btn:"Загрузить", save_btn:"Сохранить", rule_ph:"Выберите проверку и нажмите «Загрузить»",
+    step3:"Запуск", run_btn:"Запустить проверку", running:"Проверяю…", dl_excel:"Скачать Excel", dl_pdf:"Скачать PDF", done_in:"готово за",
+    summary:"Сводка", total_rows:"строк проверено", dq_ew:"DQ error/warn",
+    dq_title:"Качество данных — где не хватает данных и что некорректно",
+    dq_empty:"Дефектов данных не найдено.",
+    col_level:"уровень", col_col:"колонка", col_issue:"проблема", col_rows:"строк", col_examples:"примеры", col_impact:"влияние",
+    results:"Результаты по проверкам", no_data:"нет данных",
+    first500:"показаны первые 500 строк — полный список в Excel-отчёте",
+    pick_file:"Выберите файл", uploaded:"Файл загружен", scan_done:"Распознано файлов", rules_saved:"Правила сохранены (применяются сразу)", rules_err:"Ошибка в правилах", run_err:"Ошибка прогона",
+    login_sub:"Войдите, чтобы продолжить", login_btn:"Войти", logout:"Выйти", bad_login:"Неверный логин или пароль",
+    reload_btn:"Обновить данные", reloading:"Обновляю данные…", reload_done:"Данные обновлены", reload_err:"Ошибка обновления",
+    conn_title:"Источники данных (коннекторы)", conn_none:"Коннекторы не настроены (config/system.yaml → connectors)", conn_test:"Проверить", conn_pull:"Забрать данные", conn_enabled:"включён", conn_disabled:"выключен", conn_ok:"OK", conn_fail:"Ошибка",
+    journal_title:"Журнал загрузок и проверок", journal_search:"поиск по журналу…", journal_all:"Все даты", journal_empty:"записей нет",
+    col_time:"время", col_user:"пользователь", col_kind:"тип", col_detail:"событие",
+    users_title:"Пользователи", users_login:"логин", users_pass:"пароль", users_add:"Добавить", users_del:"Удалить", users_reset:"Сброс пароля", users_role:"роль",
+    kind_upload:"загрузка", kind_delete:"очистка", kind_run:"проверка", kind_pull:"коннектор", kind_reload:"обновление", kind_login:"вход", kind_logout:"выход", kind_user_add:"пользователь+", kind_user_del:"пользователь−", kind_user_pw:"смена пароля", kind_ocr:"OCR"
+  },
+  en: {
+    tagline:"import customs declaration verification CD vs SAP · data-quality detection · Excel/PDF reports",
+    step1:"Data upload", builtin_note:"HS-code and declaration-element references are applied automatically (builtin) when not uploaded.",
+    required:"required", optional:"optional", loaded_f:"loaded", rows:"rows", upload:"Upload",
+    scan_title:"Scanned declarations (OCR)",
+    scan_hint:"Upload scans (PDF/JPG/PNG/TIFF) — the system recognizes Russian, English and Chinese text and extracts parameters from the right document sections.",
+    scan_drop:"Choose scan files (multiple allowed)",
+    scan_upload_btn:"Recognize", scan_clear_btn:"Clear", scan_excel_btn:"Preview Excel",
+    scan_preview_title:"Pre-verification: extracted data (as it will land in Excel)",
+    field:"field", value:"value", status:"status", file:"file", pages:"pages",
+    step2:"Check parameters", step2_note:"(editable without a developer and without restart)",
+    load_btn:"Load", save_btn:"Save", rule_ph:"Select a check and press “Load”",
+    step3:"Run", run_btn:"Run checks", running:"Checking…", dl_excel:"Download Excel", dl_pdf:"Download PDF", done_in:"done in",
+    summary:"Summary", total_rows:"rows checked", dq_ew:"DQ error/warn",
+    dq_title:"Data quality — where data is missing or incorrect",
+    dq_empty:"No data defects found.",
+    col_level:"level", col_col:"column", col_issue:"issue", col_rows:"rows", col_examples:"examples", col_impact:"impact",
+    results:"Results by check", no_data:"no data",
+    first500:"first 500 rows shown — full list is in the Excel report",
+    pick_file:"Choose a file", uploaded:"File uploaded", scan_done:"Files recognized", rules_saved:"Rules saved (applied immediately)", rules_err:"Rules error", run_err:"Run error",
+    login_sub:"Sign in to continue", login_btn:"Sign in", logout:"Sign out", bad_login:"Invalid login or password",
+    reload_btn:"Refresh data", reloading:"Refreshing data…", reload_done:"Data refreshed", reload_err:"Refresh failed",
+    conn_title:"Data sources (connectors)", conn_none:"No connectors configured (config/system.yaml → connectors)", conn_test:"Test", conn_pull:"Pull data", conn_enabled:"enabled", conn_disabled:"disabled", conn_ok:"OK", conn_fail:"Error",
+    journal_title:"Log of uploads and checks", journal_search:"search the log…", journal_all:"All dates", journal_empty:"no entries",
+    col_time:"time", col_user:"user", col_kind:"type", col_detail:"event",
+    users_title:"Users", users_login:"login", users_pass:"password", users_add:"Add", users_del:"Delete", users_reset:"Reset password", users_role:"role",
+    kind_upload:"upload", kind_delete:"clear", kind_run:"check run", kind_pull:"connector", kind_reload:"refresh", kind_login:"sign-in", kind_logout:"sign-out", kind_user_add:"user+", kind_user_del:"user−", kind_user_pw:"password change", kind_ocr:"OCR"
+  },
+  zh: {
+    tagline:"进口报关单 CD 与 SAP 核对 · 数据质量检测 · Excel/PDF 报告",
+    step1:"数据上传", builtin_note:"如未上传,HS 编码与报关要素参考表将自动使用内置版本。",
+    required:"必需", optional:"可选", loaded_f:"已加载", rows:"行", upload:"上传",
+    scan_title:"扫描报关单 (OCR)",
+    scan_hint:"上传扫描件 (PDF/JPG/PNG/TIFF) — 系统可识别俄语、英语和中文,并从单据相应栏目中提取参数。",
+    scan_drop:"选择扫描文件(可多选)",
+    scan_upload_btn:"识别", scan_clear_btn:"清除", scan_excel_btn:"预览 Excel",
+    scan_preview_title:"预先核对:提取的数据(与 Excel 中的位置一致)",
+    field:"字段", value:"值", status:"状态", file:"文件", pages:"页",
+    step2:"检查参数", step2_note:"(无需开发人员、无需重启即可修改)",
+    load_btn:"加载", save_btn:"保存", rule_ph:"请选择检查项并点击“加载”",
+    step3:"运行", run_btn:"开始检查", running:"检查中…", dl_excel:"下载 Excel", dl_pdf:"下载 PDF", done_in:"用时",
+    summary:"汇总", total_rows:"已检查行数", dq_ew:"DQ 错误/警告",
+    dq_title:"数据质量 — 数据缺失或异常的位置",
+    dq_empty:"未发现数据缺陷。",
+    col_level:"级别", col_col:"列", col_issue:"问题", col_rows:"行数", col_examples:"示例", col_impact:"影响",
+    results:"各项检查结果", no_data:"无数据",
+    first500:"仅显示前 500 行 — 完整列表见 Excel 报告",
+    pick_file:"请选择文件", uploaded:"文件已上传", scan_done:"已识别文件数", rules_saved:"规则已保存(立即生效)", rules_err:"规则错误", run_err:"运行错误",
+    login_sub:"请登录以继续", login_btn:"登录", logout:"退出", bad_login:"用户名或密码错误",
+    reload_btn:"刷新数据", reloading:"正在刷新数据…", reload_done:"数据已刷新", reload_err:"刷新失败",
+    conn_title:"数据源(连接器)", conn_none:"未配置连接器(config/system.yaml → connectors)", conn_test:"测试", conn_pull:"获取数据", conn_enabled:"已启用", conn_disabled:"已停用", conn_ok:"正常", conn_fail:"错误",
+    journal_title:"上传与检查日志", journal_search:"搜索日志…", journal_all:"全部日期", journal_empty:"暂无记录",
+    col_time:"时间", col_user:"用户", col_kind:"类型", col_detail:"事件",
+    users_title:"用户", users_login:"用户名", users_pass:"密码", users_add:"添加", users_del:"删除", users_reset:"重置密码", users_role:"角色",
+    kind_upload:"上传", kind_delete:"清空", kind_run:"检查", kind_pull:"连接器", kind_reload:"刷新", kind_login:"登录", kind_logout:"退出", kind_user_add:"新增用户", kind_user_del:"删除用户", kind_user_pw:"修改密码", kind_ocr:"OCR"
+  }
+};
+let LANG = localStorage.getItem("pcs_lang") || "ru";
+const T = k => (I18N[LANG] && I18N[LANG][k]) || I18N.ru[k] || k;
+
+function setLang(l){
+  LANG = l; localStorage.setItem("pcs_lang", l);
+  document.documentElement.lang = l;
+  document.querySelectorAll("[data-i18n]").forEach(el => el.textContent = T(el.dataset.i18n));
+  document.querySelectorAll("[data-i18n-ph]").forEach(el => el.placeholder = T(el.dataset.i18nPh));
+  document.querySelectorAll(".lang button").forEach(b => b.classList.toggle("active", b.dataset.lang === l));
+  init(); renderScanPreview();
+  if(ME){
+    renderConnectors(); renderCalendar(); renderJournal();
+    if(ME.role === 'admin') renderUsers();
+  }
+}
+
+// ============================== helpers ==============================
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const toast = m => { const t = document.getElementById('toast'); t.textContent = m; t.style.opacity = 1; setTimeout(()=>t.style.opacity=0, 2600); };
+let lastRun = null, activeTab = null;
+
+async function init(){
+  const [sources, rules] = await Promise.all([
+    fetch('/api/sources').then(r=>r.json()),
+    fetch('/api/rules').then(r=>r.json()),
+  ]);
+  renderSlots(sources);
+  const sel = document.getElementById('ruleSel');
+  sel.innerHTML = rules.map(r=>`<option value="${r.file}">${r.check} (${r.file})${r.enabled?'':' — off'}</option>`).join('');
+}
+
+function renderSlots(sources){
+  const box = document.getElementById('slots');
+  box.innerHTML = '';
+  for(const s of sources){
+    const div = document.createElement('div');
+    div.className = 'slot' + (s.loaded ? ' loaded' : '');
+    div.innerHTML = `
+      <div class="lab">${esc(s.label)}</div>
+      <div class="meta">
+        ${s.required ? `<span class="badge b-req">${T('required')}</span>` : `<span class="badge b-opt">${T('optional')}</span>`}
+        ${s.builtin ? '<span class="badge b-builtin">builtin</span>' : ''}
+        ${s.loaded ? `<span class="badge b-ok">${T('loaded_f')}: ${esc(s.file)} · ${s.rows} ${T('rows')}</span>` : ''}
+      </div>
+      <div class="row">
+        <input type="file" id="f_${s.slot}" accept=".xlsx,.xls,.csv">
+        <button class="btn ghost" onclick="uploadFile('${s.slot}')">${T('upload')}</button>
+      </div>`;
+    box.appendChild(div);
+  }
+}
+
+async function uploadFile(slot){
+  const inp = document.getElementById('f_' + slot);
+  if(!inp.files.length){ toast(T('pick_file')); return; }
+  const fd = new FormData();
+  fd.append('file', inp.files[0]);
+  const r = await fetch('/api/upload/' + slot, {method:'POST', body:fd});
+  if(!r.ok){ toast('Error: ' + (await r.json()).detail); return; }
+  toast(T('uploaded'));
+  init();
+}
+
+// ============================== scans ==============================
+async function uploadScans(){
+  const inp = document.getElementById('scanInput');
+  if(!inp.files.length){ toast(T('pick_file')); return; }
+  const fd = new FormData();
+  for(const f of inp.files) fd.append('files', f);
+  toast('OCR…');
+  const r = await fetch('/api/scans/upload', {method:'POST', body:fd});
+  if(!r.ok){ toast('OCR error'); return; }
+  const d = await r.json();
+  toast(`${T('scan_done')}: ${d.ok}/${d.processed}`);
+  renderScanFiles(d.results);
+  renderScanPreview();
+  document.getElementById('scanExcel').classList.remove('hidden');
+}
+
+function renderScanFiles(results){
+  const box = document.getElementById('scanList');
+  for(const r of results){
+    const div = document.createElement('div');
+    div.className = 'scan-file';
+    if(!r.ok){
+      div.innerHTML = `<h4>✗ ${esc(r.file)}</h4><span class="muted">${esc(r.error||'')}</span>`;
+    } else {
+      const chips = Object.entries(r.fields).map(([f, rec]) =>
+        `<span class="fld fld-${rec.status}">${esc(f)}: ${rec.value ? esc(rec.value) : '—'}</span>`).join('');
+      div.innerHTML = `<h4>✓ ${esc(r.file)} <span class="muted">(${r.pages} ${T('pages')}, OCR: ${esc((r.langs||[]).join('+'))})</span></h4>
+        <div>${chips}</div>
+        <div class="excerpt">${esc(r.text_excerpt||'')}</div>`;
+    }
+    box.appendChild(div);
+  }
+}
+
+async function renderScanPreview(){
+  const wrap = document.getElementById('scanPreviewWrap');
+  try{
+    const d = await fetch('/api/scans/preview?lang=' + LANG).then(r=>r.json());
+    if(!d.count){ wrap.classList.add('hidden'); return; }
+    wrap.classList.remove('hidden');
+    const rows = d.rows;
+    const fieldKeys = Object.keys(d.labels);
+    const cols = [T('file'), ...fieldKeys.map(f=>d.labels[f]), T('status')];
+    let html = '<tr>' + cols.map(c=>`<th>${esc(c)}</th>`).join('') + '</tr>';
+    for(const r of rows){
+      html += '<tr><td>' + esc(r.file) + '</td>' +
+        fieldKeys.map(f => `<td><span class="st st-${r['_'+f+'_status']}">${esc(r[f]||'—')}</span></td>`).join('') +
+        `<td><span class="st st-${r.status}">${r.status}</span></td></tr>`;
+    }
+    document.getElementById('scanPreview').innerHTML = html;
+    if(rows.length) document.getElementById('scanExcel').classList.remove('hidden');
+  }catch(e){ /* no scans yet */ }
+}
+
+async function clearScans(){
+  await fetch('/api/scans', {method:'DELETE'});
+  document.getElementById('scanList').innerHTML = '';
+  document.getElementById('scanPreviewWrap').classList.add('hidden');
+  document.getElementById('scanExcel').classList.add('hidden');
+}
+
+// ============================== rules ==============================
+async function loadRule(){
+  const f = document.getElementById('ruleSel').value;
+  const r = await fetch('/api/rules/' + f).then(r=>r.json());
+  document.getElementById('ruleText').value = toYaml(r.rules);
+}
+
+async function saveRule(){
+  const f = document.getElementById('ruleSel').value;
+  let obj;
+  try { obj = parseSimpleYaml(document.getElementById('ruleText').value); }
+  catch(e){ toast(T('rules_err') + ': ' + e.message); return; }
+  const r = await fetch('/api/rules/' + f, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(obj)});
+  toast(r.ok ? T('rules_saved') : 'Error');
+}
+
+function toYaml(o, ind){
+  ind = ind || '';
+  if(Array.isArray(o)) return o.map(v => ind + '- ' + JSON.stringify(v)).join('\n');
+  if(o && typeof o === 'object')
+    return Object.entries(o).map(([k,v]) => (v && typeof v === 'object')
+      ? ind + k + ':\n' + toYaml(v, ind + '  ')
+      : ind + k + ': ' + JSON.stringify(v)).join('\n');
+  return ind + String(o);
+}
+function parseSimpleYaml(txt){
+  try { return JSON.parse(txt); } catch(e){}
+  const out = {};
+  for(const line of txt.split('\n')){
+    const t = line.trim();
+    if(!t || t.startsWith('#')) continue;
+    const m = t.match(/^([A-Za-z0-9_]+):\s*(.*)$/);
+    if(!m) throw new Error('line not recognized: ' + t);
+    let v = m[2];
+    try { v = JSON.parse(v); } catch(e){ v = v.replace(/^"|"$/g,''); }
+    out[m[1]] = v;
+  }
+  return out;
+}
+
+// ============================== run & results ==============================
+async function runAll(){
+  const btn = document.getElementById('runBtn');
+  btn.disabled = true; btn.textContent = T('running');
+  try{
+    const r = await fetch('/api/run', {method:'POST'});
+    if(!r.ok) throw new Error((await r.json()).detail || r.status);
+    lastRun = await r.json();
+    renderResults(lastRun);
+    document.getElementById('dlExcel').classList.remove('hidden');
+    document.getElementById('dlPdf').classList.remove('hidden');
+    document.getElementById('runInfo').textContent = T('done_in') + ' ' + lastRun.duration_sec + ' s';
+  }catch(e){ toast(T('run_err') + ': ' + e.message); }
+  btn.disabled = false; btn.textContent = T('run_btn');
+}
+
+function renderResults(res){
+  const sum = res.summary;
+  const tot = k => sum.reduce((a,r)=>a+(r[k]||0),0);
+  document.getElementById('sumCard').classList.remove('hidden');
+  document.getElementById('stats').innerHTML = `
+    <div class="stat"><div class="n">${tot('total')}</div><div class="l">${T('total_rows')}</div></div>
+    <div class="stat"><div class="n n-ok">${tot('OK')}</div><div class="l">OK</div></div>
+    <div class="stat"><div class="n n-issue">${tot('ISSUE')}</div><div class="l">ISSUE</div></div>
+    <div class="stat"><div class="n n-review">${tot('REVIEW')}</div><div class="l">REVIEW</div></div>
+    <div class="stat"><div class="n n-dq">${res.dq_counts.ERROR} / ${res.dq_counts.WARNING}</div><div class="l">${T('dq_ew')}</div></div>`;
+  document.getElementById('sumTbl').innerHTML = tableFrom(sum, 'check');
+
+  document.getElementById('dqCard').classList.remove('hidden');
+  const dq = res.data_quality;
+  if(!dq.length){
+    document.getElementById('dqBody').innerHTML = `<p class="muted">${T('dq_empty')}</p>`;
+  } else {
+    const groups = {};
+    dq.forEach(f => { const k = f.source + ' / ' + f.section; (groups[k] = groups[k] || []).push(f); });
+    document.getElementById('dqBody').innerHTML = Object.entries(groups).map(([g, items]) => `
+      <div class="dq-group"><h3>${esc(g)}</h3>
+      <div class="tbl-wrap"><table>
+        <tr><th>${T('col_level')}</th><th>${T('col_col')}</th><th>${T('col_issue')}</th><th>${T('col_rows')}</th><th>${T('col_examples')}</th><th>${T('col_impact')}</th></tr>
+        ${items.map(f=>`<tr><td><span class="st st-${f.severity}">${f.severity}</span></td>
+          <td>${esc(f.column||'—')}</td><td>${esc(f.issue)}</td><td>${f.affected_rows||''}</td>
+          <td>${esc(f.examples||'')}</td><td>${esc(f.impact||'')}</td></tr>`).join('')}
+      </table></div></div>`).join('');
+  }
+
+  document.getElementById('resCard').classList.remove('hidden');
+  const tabs = document.getElementById('tabs');
+  tabs.innerHTML = '';
+  Object.entries(res.checks).forEach(([cid, c]) => {
+    const b = document.createElement('button');
+    b.className = 'tab' + (cid === activeTab ? ' active' : '');
+    b.textContent = `${c.title} (${c.counts.ISSUE}/${c.counts.REVIEW}/${c.counts.total})`;
+    b.onclick = () => { activeTab = cid; renderResults(res); };
+    tabs.appendChild(b);
+  });
+  if(!activeTab || !res.checks[activeTab]) activeTab = Object.keys(res.checks)[0];
+  const cur = res.checks[activeTab];
+  document.getElementById('resTbl').innerHTML = tableFrom(cur.rows, 'status');
+}
+
+function tableFrom(rows, statusKey){
+  if(!rows || !rows.length) return `<tr><td class="muted">${T('no_data')}</td></tr>`;
+  const cols = Object.keys(rows[0]);
+  return '<tr>' + cols.map(c=>`<th>${esc(c)}</th>`).join('') + '</tr>' +
+    rows.slice(0, 500).map(r => '<tr>' + cols.map(c => {
+      const v = r[c];
+      if(c === statusKey || c === 'status' || c === 'severity')
+        return `<td><span class="st st-${esc(v)}">${esc(v)}</span></td>`;
+      return `<td>${esc(v)}</td>`;
+    }).join('') + '</tr>').join('') +
+    (rows.length > 500 ? `<tr><td colspan="${cols.length}" class="muted">${T('first500')}</td></tr>` : '');
+}
+
+// ============================== auth ==============================
+// Вход отключён на уровне конфигурации (auth.disabled): интерфейс работает
+// от имени admin без экрана входа. Экран входа удалён из разметки.
+let ME = null;
+async function checkAuth(){
+  ME = {login: 'admin', role: 'admin'};
+  afterAuth();
+}
+function applyStatic(){
+  document.querySelectorAll('[data-i18n]').forEach(el => el.textContent = T(el.dataset.i18n));
+  document.querySelectorAll('[data-i18n-ph]').forEach(el => el.placeholder = T(el.dataset.i18nPh));
+}
+function showLogin(){
+  document.getElementById('loginOverlay').classList.remove('hidden');
+  document.getElementById('userChip').classList.add('hidden');
+  applyStatic();
+  document.getElementById('loginName').focus();
+}
+async function doLogin(){
+  const r = await fetch('/api/auth/login', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({login: document.getElementById('loginName').value.trim(),
+                          password: document.getElementById('loginPass').value})});
+  if(!r.ok){ document.getElementById('loginErr').textContent = T('bad_login'); return; }
+  ME = await r.json();
+  document.getElementById('loginOverlay').classList.add('hidden');
+  document.getElementById('loginErr').textContent = '';
+  document.getElementById('loginPass').value = '';
+  afterAuth();
+}
+async function logout(){
+  await fetch('/api/auth/logout', {method:'POST'});
+  location.reload();
+}
+function afterAuth(){
+  const ov = document.getElementById('loginOverlay');
+  if(ov){ ov.classList.add('hidden'); }
+  document.getElementById('userChip').classList.remove('hidden');
+  document.getElementById('userName').textContent = ME.login + ' · ' + ME.role;
+  document.getElementById('usersCard').classList.toggle('hidden', ME.role !== 'admin');
+  setLang(LANG);
+  if(ME.role === 'admin') renderUsers();
+  renderConnectors(); renderCalendar(); renderJournal();
+}
+
+// ============================== connectors & reload ==============================
+async function renderConnectors(){
+  const box = document.getElementById('connBox');
+  const list = await fetch('/api/connectors').then(r => r.json());
+  if(!list.length){ box.innerHTML = ''; return; }
+  box.innerHTML = '<h3 style="font-size:13px;margin-bottom:8px">' + T('conn_title') + '</h3>' +
+    list.map(c => '<div class="conn"><div class="row">' +
+      '<b>' + esc(c.label) + '</b>' +
+      '<span class="muted">' + esc(c.type) + '</span>' +
+      '<span class="badge ' + (c.enabled ? 'b-ok' : 'b-opt') + '">' + (c.enabled ? T('conn_enabled') : T('conn_disabled')) + '</span>' +
+      '<span class="muted" id="conn_res_' + c.id + '"></span>' +
+      '<span class="spacer" style="flex:1"></span>' +
+      '<button class="btn ghost" onclick="testConnector(\'' + c.id + '\')">' + T('conn_test') + '</button>' +
+      '<button class="btn ghost" onclick="pullConnector(\'' + c.id + '\')" ' + (c.enabled ? '' : 'disabled') + '>' + T('conn_pull') + '</button>' +
+      '</div></div>').join('');
+}
+async function testConnector(id){
+  const el = document.getElementById('conn_res_' + id);
+  el.textContent = '…';
+  const r = await fetch('/api/connectors/' + id + '/test', {method:'POST'});
+  const d = await r.json();
+  el.innerHTML = '<span class="st ' + (d.ok ? 'st-OK' : 'st-ISSUE') + '">' + (d.ok ? T('conn_ok') : T('conn_fail')) + '</span> ' + esc(d.detail || '');
+}
+async function pullConnector(id){
+  const r = await fetch('/api/connectors/' + id + '/pull', {method:'POST'});
+  const d = await r.json();
+  if(!r.ok){ toast(d.detail || T('conn_fail')); return; }
+  toast(T('conn_pull') + ': ' + ((d.slots || []).join(', ') || '—'));
+  init();
+}
+async function reloadData(){
+  const info = document.getElementById('reloadInfo');
+  info.textContent = T('reloading');
+  const r = await fetch('/api/reload', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{"pull":true}'});
+  const d = await r.json();
+  info.textContent = '';
+  if(!r.ok){ toast(T('reload_err') + ': ' + (d.detail || '')); return; }
+  const errs = (d.errors || []).length ? ' · ⚠ ' + d.errors.length : '';
+  toast(T('reload_done') + ': ' + (d.restored || []).length + errs);
+  init(); renderJournal();
+}
+
+// ============================== journal ==============================
+let calCursor = new Date(); calCursor.setDate(1);
+let selDay = '';
+function calMove(n){ calCursor.setMonth(calCursor.getMonth() + n); renderCalendar(); }
+async function renderCalendar(){
+  const y = calCursor.getFullYear(), m = calCursor.getMonth();
+  document.getElementById('calTitle').textContent =
+    calCursor.toLocaleDateString(LANG === 'zh' ? 'zh-CN' : LANG, {month:'long', year:'numeric'});
+  const days = await fetch('/api/journal/days?month=' + y + '-' + String(m + 1).padStart(2, '0')).then(r => r.json());
+  const first = (new Date(y, m, 1).getDay() + 6) % 7;
+  const nDays = new Date(y, m + 1, 0).getDate();
+  const wd = LANG === 'ru' ? ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'] : LANG === 'zh' ? ['一','二','三','四','五','六','日'] : ['Mo','Tu','We','Th','Fr','Sa','Su'];
+  let html = wd.map(d => '<div class="hd">' + d + '</div>').join('');
+  for(let i = 0; i < first; i++) html += '<div class="d off"></div>';
+  for(let d = 1; d <= nDays; d++){
+    const key = y + '-' + String(m + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+    const c = days[key] || 0;
+    html += '<div class="d ' + (key === selDay ? 'sel' : '') + '" onclick="selDay=\'' + key + '\';renderCalendar();renderJournal()">' +
+            d + (c ? '<span class="cnt">' + c + '</span>' : '') + '</div>';
+  }
+  document.getElementById('cal').innerHTML = html;
+}
+function journalClearDay(){ selDay = ''; renderCalendar(); renderJournal(); }
+function kindLabel(k){ const v = T('kind_' + k); return v === 'kind_' + k ? esc(k) : v; }
+async function renderJournal(){
+  const q = encodeURIComponent(document.getElementById('jSearch').value || '');
+  const d = await fetch('/api/journal?day=' + selDay + '&q=' + q).then(r => r.json());
+  const rows = d.entries || [];
+  document.getElementById('jTbl').innerHTML =
+    '<tr><th>' + T('col_time') + '</th><th>' + T('col_user') + '</th><th>' + T('col_kind') + '</th><th>' + T('col_detail') + '</th></tr>' +
+    (rows.length
+      ? rows.map(r => '<tr><td>' + esc(r.ts) + '</td><td>' + esc(r.user) + '</td><td>' + kindLabel(r.kind) + '</td><td>' + esc(r.detail) + '</td></tr>').join('')
+      : '<tr><td colspan="4" class="muted">' + T('journal_empty') + '</td></tr>');
+}
+
+// ============================== users (admin) ==============================
+async function renderUsers(){
+  const list = await fetch('/api/users').then(r => r.json());
+  document.getElementById('uTbl').innerHTML =
+    '<tr><th>' + T('users_login') + '</th><th>' + T('users_role') + '</th><th>' + T('col_time') + '</th><th></th></tr>' +
+    list.map(u => '<tr><td>' + esc(u.login) + '</td><td>' + esc(u.role) + '</td><td class="muted">' + esc(u.created || '') + '</td>' +
+      '<td class="row">' +
+      '<button class="btn ghost" onclick="resetPw(\'' + esc(u.login) + '\')">' + T('users_reset') + '</button>' +
+      (u.login !== ME.login ? '<button class="btn ghost" onclick="delUser(\'' + esc(u.login) + '\')">' + T('users_del') + '</button>' : '') +
+      '</td></tr>').join('');
+}
+async function addUser(){
+  const r = await fetch('/api/users', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({login: document.getElementById('uLogin').value.trim(),
+                          password: document.getElementById('uPass').value,
+                          role: document.getElementById('uRole').value})});
+  if(!r.ok){ toast((await r.json()).detail || 'error'); return; }
+  document.getElementById('uLogin').value = ''; document.getElementById('uPass').value = '';
+  toast('ok'); renderUsers();
+}
+async function delUser(l){
+  if(!confirm(l + ' ?')) return;
+  await fetch('/api/users/' + encodeURIComponent(l), {method:'DELETE'});
+  renderUsers();
+}
+async function resetPw(l){
+  const p = prompt(T('users_pass') + ': ' + l);
+  if(!p) return;
+  const r = await fetch('/api/users/' + encodeURIComponent(l) + '/password',
+    {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({password: p})});
+  toast(r.ok ? 'ok' : ((await r.json()).detail || 'error'));
+}
+
+checkAuth();
+</script>
+</body>
+</html>

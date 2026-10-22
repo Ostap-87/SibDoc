@@ -1,0 +1,70 @@
+# SibDoc — учётные записи и доступ
+
+## Локальный вход (по умолчанию)
+
+При первом запуске автоматически создаётся пользователь:
+
+- логин: `admin`
+- пароль: `admin`
+
+**Сразу после первого входа смените пароль**: раздел «Пользователи» →
+кнопка «Сброс пароля» напротив admin.
+
+Хранение: `storage/users.json` (пароли — только PBKDF2-хэши, соли случайные).
+Сессии живут в памяти сервера 12 часов, перезапуск сервера требует повторного входа.
+
+## Роли
+
+| Роль | Права |
+|---|---|
+| `admin` | всё: данные, проверки, отчёты, правила, пользователи |
+| `operator` | данные, проверки, отчёты, журнал — без управления пользователями |
+
+Добавление сотрудника: раздел «Пользователи» → логин, пароль (мин. 5 символов), роль → «Добавить».
+
+## Корпоративный вход по почте (SSO/OIDC) — опционально, выключено
+
+В модуле `app/security.py` заложена поддержка входа через корпоративный
+провайдер (Microsoft Entra ID / любой OIDC). По умолчанию **выключена**;
+локальные учётные записи при этом сохраняются как аварийный доступ.
+
+### Как включить
+
+1. Зарегистрируйте приложение у провайдера идентификации
+   (для Entra ID: Microsoft Entra admin center → App registrations),
+   получите `client_id` и `client_secret`, добавьте redirect URI:
+   `https://<ваш-домен>/api/auth/sso/callback`.
+
+2. В `config/system.yaml` добавьте блок:
+
+```yaml
+auth:
+  mode: corporate_sso          # local | corporate_sso
+  provider: entra_id           # entra_id | oidc_generic
+  issuer_url: "https://login.microsoftonline.com/<tenant-id>/v2.0"
+  client_id: "..."
+  client_secret: "..."
+  redirect_uri: "https://sibdoc.example.ru/api/auth/sso/callback"
+  allowed_domain: "example.ru" # пускать только корпоративные почты этого домена
+```
+
+3. В `app/server.py` добавьте два endpoint'а (заготовка логики — в
+   `security.sso_settings()` и `security.corporate_email_allowed()`):
+
+   - `GET /api/auth/sso/login` — редирект на `<issuer_url>/authorize` с
+     `client_id`, `redirect_uri`, scope `openid profile email`;
+   - `GET /api/auth/sso/callback?code=...` — обмен кода на токен
+     (`POST <issuer_url>/token`), разбор `id_token`/userinfo, проверка
+     домена почты через `corporate_email_allowed()`, автосоздание локальной
+     учётной записи (роль `operator`, логин = часть email до `@`) и вызов
+     `security.create_session()`.
+
+4. Перезапустите сервер. Кнопка «Войти через корпоративную почту» появится
+   на экране входа (её показ может быть добавлен в `webui/index.html`).
+
+### Рекомендации по безопасности
+
+- Выпускайте сервис наружу только по HTTPS (nginx + сертификат).
+- `client_secret` храните в переменных окружения, а не в yaml (читайте при
+  старте и подставляйте в конфиг).
+- Оставьте минимум одну локальную учётную запись `admin` для аварийного входа.

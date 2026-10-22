@@ -1,0 +1,5 @@
+# Проверка инкотермсов (handbook, часть III)
+qingdao_keywords: ["青岛", "qingdao"]
+qingdao_allowed:
+  cd: "CIF"
+  sap: "C&F"

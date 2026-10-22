@@ -1,0 +1,5 @@
+# Проверка цен (handbook, часть I)
+tolerance_abs: 0.01
+per_kg_threshold: 100          # цены ниже — считаем «за кг», умножаем на 1000
+bp_sea_contract_patterns: []   # контракты схемы BP SEA — исключаются (проверка раз в 6 мес.)
+escalation: "SISH finance / export teams / CN OL / SVS team"
