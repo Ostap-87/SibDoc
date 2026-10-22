@@ -45,12 +45,11 @@ export PIP_DEFAULT_TIMEOUT="${PIP_DEFAULT_TIMEOUT:-60}"
 
 echo "[3/4] Распознавание сканов (Tesseract) — необязательно"
 if command -v tesseract >/dev/null 2>&1; then
-    echo "      Tesseract уже установлен"
-elif command -v brew >/dev/null 2>&1; then
-    brew install tesseract || echo "      не удалось — сканы можно будет включить позже: brew install tesseract"
+    echo "      Tesseract уже установлен — сканы PDF/TIFF без текстового слоя будут распознаваться"
 else
-    echo "      Не установлен. Для сканов: поставьте Homebrew (https://brew.sh) и выполните brew install tesseract."
-    echo "      Всё остальное работает без него."
+    # Не ставим автоматически: на Mac с Intel Homebrew собирает его из исходников (часы и 40+ пакетов).
+    echo "      Не установлен — это нормально: нужен только для сканов без текстового слоя."
+    echo "      Поставить позже (Apple Silicon): brew install tesseract tesseract-lang"
 fi
 
 echo "[4/4] Создаю приложение SibDoc в ~/Applications"
