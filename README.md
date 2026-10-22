@@ -5,6 +5,11 @@
 элементы декларации, контракт, полнота, сквозная «ДТ ↔ 报关单 ↔ SAP»), проверка качества
 данных, курсы ЦБ РФ и НБК (CFETS), журнал событий, коннекторы, отчёты Excel и PDF (RU + ZH).
 
+**На Mac (окно приложения):** скачайте репозиторий (Code → Download ZIP), распакуйте и в Терминале
+выполните `bash ~/Downloads/sibdoc-main/install_mac.command` — появится приложение «SibDoc» в
+~/Applications (Launchpad, Dock). Нужен Python 3.11+ с python.org; установщик подскажет.
+В браузере вместо окна: `start_mac.command`.
+
 **Запуск:** `pip install -r requirements.txt && uvicorn app.server:app --port 8000` → http://localhost:8000
 (или `docker compose up -d`). Вход выключен (прототип): `config/system.yaml → auth.disabled`.
 
