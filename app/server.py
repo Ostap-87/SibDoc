@@ -55,7 +55,7 @@ def _cfg() -> dict:
     return load_config()
 
 
-app = FastAPI(title="PostControl Suite API", version="2.0.0")
+app = FastAPI(title="SibDoc 3 API", version="3.0.0-dev")
 app.add_middleware(CORSMiddleware, allow_origins=(_cfg().get("server") or {}).get("cors_origins") or ["*"],
                    allow_methods=["*"], allow_headers=["*"])
 
@@ -222,7 +222,7 @@ def _jsonable(df: pd.DataFrame, limit: int | None = None) -> list[dict]:
 # ------------------------------------------------------------------ meta
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "product": "PostControl Suite", "version": app.version}
+    return {"status": "ok", "product": "SibDoc 3", "version": app.version}
 
 
 @app.get("/api/config")
