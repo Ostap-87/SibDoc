@@ -31,7 +31,13 @@ def header_key(name) -> str:
 def _load(path: str, mtime: float) -> dict:
     with open(path, encoding="utf-8") as fh:
         data = yaml.safe_load(fh) or {}
-    return data.get("fields") or {}
+    fields = data.get("fields") or {}
+    # --- ВЭД-пакет: extra_synonyms — синонимы к уже объявленным полям отдельным блоком файла
+    for field, extra in (data.get("extra_synonyms") or {}).items():
+        if field in fields:
+            syn = list(fields[field].get("synonyms") or [])
+            fields[field]["synonyms"] = syn + [s for s in (extra or []) if s not in syn]
+    return fields
 
 
 def dictionary() -> dict:

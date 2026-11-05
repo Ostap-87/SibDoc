@@ -28,6 +28,13 @@ def load_mapping() -> dict:
         return (yaml.safe_load(f) or {}).get("target", {})
 
 
+def load_package_mapping() -> dict:
+    """ВЭД-пакет: {вид документа: {sheet, columns}}."""
+    path = os.path.join(PROJECT_ROOT, "config", "scan_mapping.yaml")
+    with open(path, encoding="utf-8") as f:
+        return (yaml.safe_load(f) or {}).get("package", {}) or {}
+
+
 def build_preview_rows(scan_results: list[dict]) -> list[dict]:
     """scan_results — список {file, fields: {field: {value,status,...}}}.
     Возвращает строки для UI-таблицы предпросмотра."""
@@ -44,7 +51,8 @@ def build_preview_rows(scan_results: list[dict]) -> list[dict]:
         else:
             overall = "found"
         row = {"file": res.get("file", ""), "status": overall,
-               "pages": res.get("pages", 1), "langs": "+".join(res.get("langs", []))}
+               "pages": res.get("pages", 1), "langs": "+".join(res.get("langs", [])),
+               "kind": res.get("package_kind") or "declaration"}          # ВЭД-пакет: вид документа
         for field, rec in fields.items():
             row[field] = rec.get("value", "")
             row[f"_{field}_status"] = rec.get("status", "missing")
@@ -63,6 +71,8 @@ def write_preview_excel(scan_results: list[dict], out_path: str) -> str:
     header = [cols[f] for f in order] + [svc.get("file", "Source file"),
                                          svc.get("status", "Extract status")]
 
+    package_scans = [r for r in scan_results if r.get("package_kind")]       # ВЭД-пакет — свои листы
+    scan_results = [r for r in scan_results if not r.get("package_kind")]
     data_rows = []
     for res in scan_results:
         fields = res.get("fields", {})
@@ -97,4 +107,24 @@ def write_preview_excel(scan_results: list[dict], out_path: str) -> str:
             if ov in STATUS_FILL:
                 overall_cell.fill = STATUS_FILL[ov]
                 overall_cell.font = Font(bold=True)
+        # --- ВЭД-пакет: инвойсы, упаковочные листы, транспортные документы, сертификаты
+        for kind, spec in load_package_mapping().items():
+            items = [r for r in package_scans if r.get("package_kind") == kind]
+            if not items:
+                continue
+            pcols = spec.get("columns") or {}
+            fields = list(pcols)
+            pdf = pd.DataFrame([[r["fields"].get(f, {}).get("value", "") for f in fields] + [r.get("file", "")]
+                                for r in items], columns=[pcols[f] for f in fields] + [svc.get("file", "Source file")])
+            name = spec.get("sheet", kind.upper())[:31]
+            pdf.to_excel(xw, sheet_name=name, index=False)
+            ws = xw.book[name]
+            ws.freeze_panes = "A2"
+            for cell in ws[1]:
+                cell.font = Font(bold=True, color="FFFFFF")
+                cell.fill = PatternFill("solid", fgColor="1A56DB")
+            for ri, r in enumerate(items, start=2):
+                for ci, f in enumerate(fields, start=1):
+                    ws.cell(row=ri, column=ci).fill = STATUS_FILL.get(r["fields"].get(f, {}).get("status", "missing"),
+                                                                      STATUS_FILL["missing"])
     return out_path

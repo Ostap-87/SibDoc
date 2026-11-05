@@ -4,7 +4,9 @@
 
     python3 run_cli.py --wide data/wide_table.xlsx --purchase data/purchase.xlsx
     python3 run_cli.py --wide data/demo/wide_table_demo.xlsx --purchase data/demo/purchase_demo.xlsx \\
-        --ru-dt "data/demo/ru_dt/*.xml" --cn-dec data/demo/cn_dec_demo.xlsx --sap-vs-cd data/demo/sap_vs_cd_demo.csv
+        --ru-dt "data/demo/ru_dt/*.xml" --cn-dec data/demo/cn_dec_demo.xlsx --sap-vs-cd data/demo/sap_vs_cd_demo.csv \\
+        --invoice "data/demo/package/invoice/*" --packing "data/demo/package/packing/*" \\
+        --transport "data/demo/package/transport/*" --conformity "data/demo/package/conformity/*"
 
 Отчёты: storage/runs/<номер прогона>/ и последний — storage/reports/post_control_report.xlsx / .pdf.
 Код возврата: 1, если есть ISSUE или ошибки качества данных.
@@ -45,6 +47,11 @@ def main():
     ap.add_argument("--cde-ref", dest="cde_reference", help="справочник элементов декларации")
     ap.add_argument("--ru-dt", dest="ru_dt", nargs="*", help="ДТ РФ: XML ФТС / Excel / ZIP (можно маску «*.xml»)")
     ap.add_argument("--cn-dec", dest="cn_dec", nargs="*", help="报关单 КНР: Excel / CSV / XML / ZIP")
+    # ВЭД-пакет: документы отгрузки (Excel / CSV / PDF / сканы / ZIP; можно маску «*.xlsx»)
+    ap.add_argument("--invoice", nargs="*", help="коммерческие инвойсы")
+    ap.add_argument("--packing", nargs="*", help="упаковочные листы")
+    ap.add_argument("--transport", nargs="*", help="транспортные документы: CMR, B/L, СМГС, AWB")
+    ap.add_argument("--conformity", nargs="*", help="сертификаты соответствия ЕАЭС и происхождения")
     ap.add_argument("--user", default=os.environ.get("USER", "cli"), help="кто запускает (для журнала и отчёта)")
     args = ap.parse_args()
 
@@ -59,7 +66,9 @@ def main():
             ("cd_drafts", [args.cd_drafts] if args.cd_drafts else []),
             ("hs_reference", [args.hs_reference] if args.hs_reference else []),
             ("cde_reference", [args.cde_reference] if args.cde_reference else []),
-            ("ru_dt", _expand(args.ru_dt)), ("cn_dec", _expand(args.cn_dec))]
+            ("ru_dt", _expand(args.ru_dt)), ("cn_dec", _expand(args.cn_dec)),
+            ("invoice", _expand(args.invoice)), ("packing", _expand(args.packing)),          # ВЭД-пакет
+            ("transport", _expand(args.transport)), ("conformity", _expand(args.conformity))]
     for slot, paths in plan:
         if not paths:
             continue

@@ -232,6 +232,20 @@ def parse_xml(content: bytes, filename: str = "", profile: str | None = None) ->
 
     head_contracts = contracts_in(root, skip) if pd_spec else []
 
+    # --- ВЭД-пакет: все представленные документы (гр. 44: инвойс, накладная, сертификаты…) —
+    # «код номер» через «; »; по номерам проверка «Пакет документов» находит ссылки ДТ на документы
+    if pd_spec.get("all_field"):
+        docs = []
+        for el in root.iter():
+            if _local(el.tag) in (pd_spec.get("tag") or []):
+                num = _find(el, pd_spec.get("number") or [])
+                code = _find(el, pd_spec.get("code") or [])
+                item = f"{code} {num}".strip() if num else ""
+                if item and item not in docs:
+                    docs.append(item)
+        if docs:
+            header[pd_spec["all_field"]] = "; ".join(docs)
+
     rows = []
     for idx, item in enumerate(items or [None], start=1):
         rec = dict(header)

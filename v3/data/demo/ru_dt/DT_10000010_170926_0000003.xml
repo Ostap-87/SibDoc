@@ -36,7 +36,18 @@
         <cat_ru:PrDocumentDate>2026-01-10</cat_ru:PrDocumentDate>
         <catESAD_cu:PresentedDocumentModeCode>03011</catESAD_cu:PresentedDocumentModeCode>
       </ESADout_CUPresentedDocument>
-      <catESAD_cu:ESADContainer>
+      <ESADout_CUPresentedDocument>
+        <cat_ru:PrDocumentName>хмбния</cat_ru:PrDocumentName>
+        <cat_ru:PrDocumentNumber>INV-DEMO-2603</cat_ru:PrDocumentNumber>
+        <cat_ru:PrDocumentDate>2026-09-15</cat_ru:PrDocumentDate>
+        <catESAD_cu:PresentedDocumentModeCode>04021</catESAD_cu:PresentedDocumentModeCode>
+      </ESADout_CUPresentedDocument>
+      <ESADout_CUPresentedDocument>
+        <cat_ru:PrDocumentName>йнмняюлемр</cat_ru:PrDocumentName>
+        <cat_ru:PrDocumentNumber>DEMOBL260003</cat_ru:PrDocumentNumber>
+        <cat_ru:PrDocumentDate>2026-09-18</cat_ru:PrDocumentDate>
+        <catESAD_cu:PresentedDocumentModeCode>02011</catESAD_cu:PresentedDocumentModeCode>
+      </ESADout_CUPresentedDocument>      <catESAD_cu:ESADContainer>
         <catESAD_cu:ContainerQuantity>1</catESAD_cu:ContainerQuantity>
         <catESAD_cu:ContainerNumber><catESAD_cu:ContainerIdentificaror>DEMU0001049</catESAD_cu:ContainerIdentificaror></catESAD_cu:ContainerNumber>
       </catESAD_cu:ESADContainer>

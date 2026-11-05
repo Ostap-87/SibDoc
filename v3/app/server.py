@@ -43,6 +43,7 @@ from app.services import labels, runs
 from app.services.decl_parser import fields_summary, parse_declaration
 from app.services.engine import run as engine_run
 from app.services.loader import ACCEPTED_EXTS, LoadError, load_sources, read_many
+from app.services.loader import ALL_EXTS, accepted_for  # ВЭД-пакет: PDF и сканы в слотах документов отгрузки
 from app.services.ocr_reader import available_languages, read_scan, tesseract_available
 from app.services.scan_mapper import build_preview_rows, write_preview_excel
 from app.services.xml_decl import XmlDeclError
@@ -98,7 +99,7 @@ def _slot_files(slot: str) -> list[tuple[bytes, str]]:
     out = []
     for name in sorted(os.listdir(d)):
         p = os.path.join(d, name)
-        if os.path.isfile(p) and name.lower().endswith(ACCEPTED_EXTS):
+        if os.path.isfile(p) and name.lower().endswith(ALL_EXTS):      # ВЭД-пакет: и PDF/сканы
             with open(p, "rb") as fh:
                 out.append((fh.read(), name))
     return out
@@ -238,7 +239,8 @@ def get_config():
         "max_upload_mb": int((cfg.get("server") or {}).get("max_upload_mb", 100)),
         "accepted": list(ACCEPTED_EXTS),
         "sources": {slot: {"label": s.get("label"), "required": bool(s.get("required")),
-                           "multi": bool(s.get("multi")), "has_builtin": bool(s.get("builtin"))}
+                           "multi": bool(s.get("multi")), "has_builtin": bool(s.get("builtin")),
+                           "package": s.get("package") or None, "accept": list(accepted_for(s))}   # ВЭД-пакет
                     for slot, s in cfg.get("sources", {}).items()},
         "checks": {cid: {"enabled": c.get("enabled"), "rules": c.get("rules"),
                          "title": labels.check_title(cid), "title_zh": labels.check_title(cid, "zh")}
@@ -376,6 +378,7 @@ def sources_state():
             "parts": [{k: p.get(k) for k in ("file", "format", "sheet", "encoding", "delimiter", "profile",
                                               "header_row", "rows")} for p in info.get("parts") or []],
             "builtin": sc.get("builtin"),
+            "package": sc.get("package") or None, "accept": list(accepted_for(sc)),     # ВЭД-пакет
         })
     return out
 
@@ -423,6 +426,52 @@ def declarations(slot: str):
                                        "label_zh": labels.column(c, "zh")} for c in goods_cols],
                     "goods": _jsonable(grp[goods_cols]) if goods_cols else []})
     return {"slot": slot, "count": len(out), "declarations": out}
+
+
+# ------------------------------------------------------------------ ВЭД-пакет: документы отгрузки
+PACKAGE_LINE_COLS = ("item_no", "product_name", "model", "hs_code", "container", "seal_no", "qty", "unit",
+                     "unit_price", "total_value", "packages", "package_type", "net_weight", "gross_weight",
+                     "origin_country")
+
+
+@app.get("/api/package-docs/{slot}")
+def package_docs_cards(slot: str):
+    """Инвойсы / упаковочные листы / транспортные документы / сертификаты карточками: шапка + позиции."""
+    from app.services import package_docs as pkg
+    cfg = _cfg()
+    kind = ((cfg.get("sources") or {}).get(slot) or {}).get("package")
+    if not kind:
+        raise HTTPException(400, "Только слоты пакета ВЭД: invoice, packing, transport, conformity")
+    src = _uploads.get(slot)
+    if src is None or src.df.empty:
+        return {"slot": slot, "kind": kind, "count": 0, "documents": []}
+    df = src.df.copy()
+    numf = pkg.NUMBER_FIELD[kind]
+    df["_doc"] = [str(v) if str(v).strip() not in ("", "nan", "None") else f"({f})"
+                  for v, f in zip(df[numf] if numf in df.columns else [""] * len(df),
+                                  df["source_file"] if "source_file" in df.columns else [""] * len(df))]
+    line_cols = [c for c in PACKAGE_LINE_COLS if c in df.columns] if kind != "conformity" else \
+        [c for c in ("product_name", "model", "hs_code", "origin_country") if c in df.columns]
+    out = []
+    for num, grp in df.groupby("_doc", sort=False):
+        header = []
+        for c in grp.columns:
+            if c in line_cols or c in ("_doc", numf):
+                continue
+            vals = [v for v in grp[c].tolist() if str(v).strip() not in ("", "nan", "None", "NaT")]
+            if vals and len(set(map(str, vals))) == 1:
+                val = str(vals[0])
+                if c == "doc_type":
+                    val = f"{pkg.doc_type_label(val)} / {pkg.doc_type_label(val, 'zh')}"
+                header.append({"key": c, "label_ru": labels.column(c, "ru"), "label_zh": labels.column(c, "zh"),
+                               "value": val})
+        lines = grp[line_cols] if line_cols else grp.iloc[0:0]
+        lines = lines.loc[[not all(str(v).strip() in ("", "nan", "None") for v in r) for r in lines.values]]
+        out.append({"number": str(num), "header": header,
+                    "lines_columns": [{"key": c, "label_ru": labels.column(c, "ru"), "label_zh": labels.column(c, "zh")}
+                                      for c in line_cols],
+                    "lines": _jsonable(lines) if len(lines) else []})
+    return {"slot": slot, "kind": kind, "count": len(out), "documents": out}
 
 
 # ------------------------------------------------------------------ auth & users
@@ -782,8 +831,10 @@ def scans_info():
 
 
 @app.post("/api/scans/upload")
-async def upload_scans(request: Request, files: list[UploadFile] = File(...)):
-    """Массовая загрузка сканов деклараций: текстовый слой PDF или OCR (ru+en+zh) -> извлечение полей."""
+async def upload_scans(request: Request, files: list[UploadFile] = File(...), kind: str = "auto"):
+    """Массовая загрузка сканов деклараций: текстовый слой PDF или OCR (ru+en+zh) -> извлечение полей.
+    kind (ВЭД-пакет): auto | declaration | invoice | packing | transport | conformity."""
+    from app.services import package_docs as pkg
     limit = _max_bytes(_cfg())
     results = []
     for f in files:
@@ -795,10 +846,17 @@ async def upload_scans(request: Request, files: list[UploadFile] = File(...)):
             content = await _read_limited(f, limit)
             ocr = read_scan(io.BytesIO(content), f.filename)
             parsed = parse_declaration(ocr["text"])
+            # --- ВЭД-пакет: документ отгрузки — по выбору или по заголовку, если номер декларации не найден
+            doc_kind = kind if kind in pkg.KINDS else None
+            if kind == "auto" and not any(parsed.get(k, {}).get("status") == "found" for k in ("decl_ru", "decl_num")):
+                doc_kind = pkg.detect_kind(ocr["text"])
+            if doc_kind:
+                parsed = pkg.parse_text_fields(ocr["text"], doc_kind)
             rec = {"file": f.filename, "ok": True, "pages": ocr["pages"], "langs": ocr["engine_langs"],
                    "text_layer_pages": ocr.get("text_layer_pages", 0), "text_excerpt": ocr["text"][:600],
                    "has_cjk": bool(re.search(r"[一-鿿]", ocr["text"])),
-                   "has_cyr": bool(re.search(r"[А-Яа-яЁё]", ocr["text"])), "fields": parsed}
+                   "has_cyr": bool(re.search(r"[А-Яа-яЁё]", ocr["text"])), "fields": parsed,
+                   "package_kind": doc_kind}
             _scans.append(rec)
             results.append(rec)
         except HTTPException:
@@ -815,9 +873,10 @@ async def upload_scans(request: Request, files: list[UploadFile] = File(...)):
 def scans_preview(lang: str = "ru"):
     rows = build_preview_rows(_scans)
     labels_ = {}
-    if _scans:
-        for item in fields_summary(_scans[0]["fields"], lang=lang):
-            labels_[item["field"]] = item["label"]
+    for s in _scans:                                   # ВЭД-пакет: поля всех видов документов
+        for item in fields_summary(s["fields"], lang=lang):
+            lab = item["label"] if item["label"] != item["field"] else fdict.label(item["field"], lang)
+            labels_.setdefault(item["field"], lab)
     return {"count": len(rows), "labels": labels_, "rows": rows}
 
 
@@ -845,6 +904,13 @@ def scans_to_source(request: Request):
     rows = {"ru_dt": [], "cn_dec": []}
     for s in _scans:
         f = {k: (v.get("value") or "") for k, v in s["fields"].items()}
+        if s.get("package_kind"):                     # ВЭД-пакет: документ отгрузки -> его слот
+            slot = next((k for k, v in (cfg.get("sources") or {}).items() if v.get("package") == s["package_kind"]),
+                        None)
+            if slot:
+                rows.setdefault(slot, []).append({**{k: v for k, v in f.items() if v},
+                                                  "source_file": f"{s['file']} (скан)"})
+            continue
         common = {"container": f.get("container_num"), "contract": f.get("contract"),
                   "incoterms": f.get("incoterms"), "hs_code": f.get("hs_code"), "net_weight": f.get("net_weight"),
                   "model": f.get("declared_model"), "source_file": f"{s['file']} (скан)"}

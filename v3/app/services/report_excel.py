@@ -1,7 +1,8 @@
 from __future__ import annotations
 # -*- coding: utf-8 -*-
 """Excel-отчёт: сводка, источники, качество данных, лист на каждую проверку,
-полные листы деклараций «ДТ РФ» и «报关单 КНР», курсы пересчёта.
+полные листы деклараций «ДТ РФ» и «报关单 КНР», документов пакета ВЭД (инвойсы,
+упаковочные листы, транспортные документы, сертификаты), курсы пересчёта.
 
 Заголовки — по-русски и по-китайски («Контейнер / 集装箱号»), чтобы отчёт читали
 обе стороны. Значения из входных файлов, похожие на формулы («=…», «+…», «@…»),
@@ -31,7 +32,8 @@ FONTS = {"OK": Font(color="006100"), "ISSUE": Font(color="9C0006", bold=True),
          "INFO": Font(color="1F4E79")}
 HEADER_FILL = PatternFill("solid", fgColor="1A56DB")
 WRAP_COLS = {"detail", "issue", "impact", "examples", "sap_lines", "declared_elements", "reference_elements",
-             "product_name", "decl_elements", "fx_rate", "fx_rate_ru", "checks", "Пояснение"}
+             "product_name", "decl_elements", "fx_rate", "fx_rate_ru", "checks", "Пояснение",
+             "detail_zh", "docs"}
 _FORMULA = re.compile(r"^[=+@\-]")
 
 
@@ -123,6 +125,12 @@ def write_excel(result: RunResult, cfg: dict, out_path: str) -> str:
             if s is not None and not s.df.empty:
                 df, hdr = _decl_frame(s, ((cfg.get("sources") or {}).get(slot) or {}).get("fields"))
                 _write(xw, df, title, used, hdr)
+        # --- ВЭД-пакет: документы отгрузки целиком (инвойсы, упаковочные листы, накладные, сертификаты)
+        for slot, (sheet, _title) in labels.PACKAGE_SHEETS.items():
+            s = result.sources.get(slot)
+            if s is not None and not s.df.empty:
+                df, hdr = _decl_frame(s, None)
+                _write(xw, df, sheet, used, hdr)
         if result.rates_used:
             _write(xw, pd.DataFrame({"Курс / 汇率": result.rates_used}), "Курсы", used)
 

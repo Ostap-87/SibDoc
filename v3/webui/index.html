@@ -105,6 +105,10 @@
   #modal .mh{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:center}
   #modal .mb{padding:12px 16px;overflow:auto}
   .note{background:#f8faff;border:1px solid #dbe5ff;border-radius:8px;padding:8px 12px;font-size:12.5px;color:#334}
+  /* ВЭД-пакет */
+  .pkg-head{display:flex;align-items:center;gap:8px;margin:16px 0 4px}
+  .b-pkg{background:#e7f6ec;color:#11613a}
+  .b-kind{background:#eef2ff;color:#3730a3}
 </style>
 </head>
 <body>
@@ -123,7 +127,7 @@
   </div>
 </header>
 <nav class="toc">
-  <a href="#c-data" data-i18n="nav_data"></a><a href="#c-decl" data-i18n="nav_decl"></a>
+  <a href="#c-data" data-i18n="nav_data"></a><a href="#c-decl" data-i18n="nav_decl"></a><a href="#c-pkg" data-i18n="nav_pkg"></a>
   <a href="#c-scan" data-i18n="nav_scan"></a><a href="#c-rates" data-i18n="nav_rates"></a>
   <a href="#c-rules" data-i18n="nav_rules"></a><a href="#c-run" data-i18n="nav_run"></a>
   <a href="#c-journal" data-i18n="nav_journal"></a><a href="#c-conn" data-i18n="nav_conn"></a>
@@ -134,6 +138,10 @@
     <h2><span class="step">1</span> <span data-i18n="step1"></span></h2>
     <p class="muted" style="margin-bottom:10px" data-i18n="step1_hint"></p>
     <div class="slots" id="slots"></div>
+    <!-- ВЭД-пакет: слоты документов отгрузки -->
+    <div class="pkg-head"><b data-i18n="pkg_slots_title"></b><span class="badge b-pkg">Excel · CSV · PDF · scan</span></div>
+    <p class="muted" style="margin-bottom:8px" data-i18n="pkg_slots_hint"></p>
+    <div class="slots" id="pkgSlots"></div>
     <div class="row" style="margin-top:10px">
       <button class="btn ghost" onclick="reloadData()" data-i18n="reload_btn"></button>
       <span class="muted" id="reloadInfo"></span>
@@ -153,6 +161,16 @@
     <div id="declBox"></div>
   </div>
 
+  <!-- ВЭД-пакет: документы отгрузки карточками -->
+  <div class="card" id="c-pkg">
+    <h2><span class="step">2</span> <span data-i18n="pkg_title"></span></h2>
+    <div class="row" style="margin-bottom:10px">
+      <div class="tabs" style="margin:0" id="pkgTabs"></div>
+      <input class="jsearch" id="pkgSearch" oninput="renderPkg(true)" data-i18n-ph="pkg_search">
+    </div>
+    <div id="pkgBox"></div>
+  </div>
+
   <div class="card" id="c-scan">
     <h2><span class="step">3</span> <span data-i18n="scan_title"></span></h2>
     <p class="muted" style="margin-bottom:10px" data-i18n="scan_hint"></p>
@@ -161,6 +179,11 @@
         <span data-i18n="scan_drop"></span>
         <input type="file" id="scanInput" multiple accept=".pdf,.jpg,.jpeg,.png,.tif,.tiff,.bmp" style="display:none">
       </div>
+      <select id="scanKind" title="">
+        <option value="auto" data-i18n="scan_kind_auto"></option><option value="declaration" data-i18n="scan_kind_decl"></option>
+        <option value="invoice" data-i18n="pkg_invoice"></option><option value="packing" data-i18n="pkg_packing"></option>
+        <option value="transport" data-i18n="pkg_transport"></option><option value="conformity" data-i18n="pkg_conformity"></option>
+      </select>
       <button class="btn ghost" onclick="uploadScans()" data-i18n="scan_upload_btn"></button>
       <button class="btn ghost" onclick="scansToSource()" data-i18n="scan_to_src"></button>
       <button class="btn ghost" onclick="clearScans()" data-i18n="scan_clear_btn"></button>
@@ -335,7 +358,13 @@ const I18N = {
     conn_test:"Проверить", conn_pull:"Забрать данные", conn_enabled:"включён", conn_disabled:"выключен", conn_ok:"OK", conn_fail:"нет", stage_ready:"работает", stage_wait:"ждёт доступа", missing:"не заполнено",
     journal_title:"Журнал событий", journal_search:"поиск по журналу…", journal_all:"Все даты", journal_empty:"записей нет", journal_export:"Выгрузить CSV", all_kinds:"все события",
     col_time:"время", col_user:"пользователь", col_kind:"событие", col_detail:"что произошло",
-    users_title:"Пользователи", users_login:"логин", users_pass:"пароль", users_add:"Добавить", users_del:"Удалить", users_reset:"Сброс пароля", users_role:"роль", close:"Закрыть"
+    users_title:"Пользователи", users_login:"логин", users_pass:"пароль", users_add:"Добавить", users_del:"Удалить", users_reset:"Сброс пароля", users_role:"роль", close:"Закрыть",
+    // ВЭД-пакет
+    nav_pkg:"Пакет ВЭД", pkg_slots_title:"Пакет документов ВЭД", pkg_slots_hint:"Инвойс, упаковочный лист, транспортный документ (CMR, коносамент B/L, СМГС, AWB) и сертификаты (соответствие ЕАЭС, происхождение). Excel/CSV — строка на позицию, шапка документа в колонках или блоком над таблицей; PDF с текстовым слоем и сканы распознаются. Проверка «7. Пакет документов» собирает документы в отгрузки по номеру инвойса и контейнерам.",
+    pkg_title:"Пакет документов ВЭД — инвойсы, упаковочные листы, транспортные документы, сертификаты", pkg_search:"поиск по номеру, контейнеру, товару…",
+    pkg_invoice:"Инвойсы", pkg_packing:"Упаковочные листы", pkg_transport:"Транспортные документы", pkg_conformity:"Сертификаты",
+    pkg_none:"Документы этого вида не загружены — загрузите файл в слот пакета ВЭД (шаг 1).", pkg_lines:"позиций",
+    scan_kind_auto:"вид: определить сам", scan_kind_decl:"декларация (ДТ / 报关单)"
   },
   en: {
     tagline:"customs post-control: CN declaration · RU DT · SAP", proto_mode:"Prototype: sign-in disabled",
@@ -365,7 +394,13 @@ const I18N = {
     conn_test:"Test", conn_pull:"Pull data", conn_enabled:"enabled", conn_disabled:"disabled", conn_ok:"OK", conn_fail:"no", stage_ready:"ready", stage_wait:"awaiting access", missing:"missing",
     journal_title:"Event log", journal_search:"search the log…", journal_all:"All dates", journal_empty:"no entries", journal_export:"Export CSV", all_kinds:"all events",
     col_time:"time", col_user:"user", col_kind:"event", col_detail:"what happened",
-    users_title:"Users", users_login:"login", users_pass:"password", users_add:"Add", users_del:"Delete", users_reset:"Reset password", users_role:"role", close:"Close"
+    users_title:"Users", users_login:"login", users_pass:"password", users_add:"Add", users_del:"Delete", users_reset:"Reset password", users_role:"role", close:"Close",
+    // ВЭД-пакет
+    nav_pkg:"Shipment docs", pkg_slots_title:"Shipment document package", pkg_slots_hint:"Commercial invoice, packing list, transport document (CMR, B/L, SMGS rail waybill, AWB) and certificates (EAEU conformity, origin). Excel/CSV — one row per line item, document header in columns or as a block above the table; digital PDFs and scans are recognized. Check “7. Shipment documents” groups documents into shipments by invoice number and containers.",
+    pkg_title:"Shipment documents — invoices, packing lists, transport documents, certificates", pkg_search:"search by number, container, goods…",
+    pkg_invoice:"Invoices", pkg_packing:"Packing lists", pkg_transport:"Transport documents", pkg_conformity:"Certificates",
+    pkg_none:"No documents of this type — upload a file into the shipment-document slot (step 1).", pkg_lines:"lines",
+    scan_kind_auto:"type: detect", scan_kind_decl:"declaration (DT / CN)"
   },
   zh: {
     tagline:"报关单事后核查：中国报关单 · 俄罗斯报关单 · SAP", proto_mode:"原型：已关闭登录",
@@ -395,7 +430,13 @@ const I18N = {
     conn_test:"测试", conn_pull:"获取数据", conn_enabled:"已启用", conn_disabled:"已停用", conn_ok:"正常", conn_fail:"否", stage_ready:"可用", stage_wait:"待授权", missing:"未填写",
     journal_title:"事件日志", journal_search:"搜索日志…", journal_all:"全部日期", journal_empty:"暂无记录", journal_export:"导出 CSV", all_kinds:"全部事件",
     col_time:"时间", col_user:"用户", col_kind:"事件", col_detail:"内容",
-    users_title:"用户", users_login:"用户名", users_pass:"密码", users_add:"添加", users_del:"删除", users_reset:"重置密码", users_role:"角色", close:"关闭"
+    users_title:"用户", users_login:"用户名", users_pass:"密码", users_add:"添加", users_del:"删除", users_reset:"重置密码", users_role:"角色", close:"关闭",
+    // ВЭД-пакет
+    nav_pkg:"外贸单证", pkg_slots_title:"外贸单证包", pkg_slots_hint:"商业发票、装箱单、运输单据（CMR、提单、国际铁路联运运单、空运单）及证书（欧亚经济联盟合格证、原产地证书）。Excel/CSV 每行一个品项，单据表头可在各列中或在表格上方；电子 PDF 和扫描件可自动识别。检查“7. 外贸单证包”按发票号和集装箱号把单据归入同一批货物。",
+    pkg_title:"外贸单证包 — 发票、装箱单、运输单据、证书", pkg_search:"按单号、集装箱号、商品搜索…",
+    pkg_invoice:"商业发票", pkg_packing:"装箱单", pkg_transport:"运输单据", pkg_conformity:"证书",
+    pkg_none:"尚未上传此类单据 — 请在第 1 步上传到外贸单证槽位。", pkg_lines:"品项",
+    scan_kind_auto:"类型：自动识别", scan_kind_decl:"报关单（俄/中）"
   }
 };
 let LANG = (()=>{ try { return localStorage.getItem("pcs_lang") || "ru"; } catch(e){ return "ru"; } })();
@@ -432,7 +473,7 @@ async function refreshAll(){
     [CFG, LABELS] = await Promise.all([api('/api/config'), api('/api/labels')]);
   } catch(e){ toast('API: ' + e.message); return; }
   document.getElementById('modeChip').classList.toggle('hidden', !CFG.auth_disabled);
-  await Promise.all([renderSlots(), renderRules(), renderDecl(), renderRates(), renderManual(), renderRuns(),
+  await Promise.all([renderSlots(), renderRules(), renderDecl(), renderPkg(), renderRates(), renderManual(), renderRuns(),
                      renderConnectors(), renderKinds().then(()=>{ renderCalendar(); renderJournal(); }), renderScanPreview()]);
   if(lastRun) renderResults(lastRun);
 }
@@ -441,8 +482,8 @@ async function refreshAll(){
 async function renderSlots(){
   const sources = await api('/api/sources');
   const box = document.getElementById('slots');
-  const accept = (CFG.accepted || ['.xlsx','.xls','.csv']).join(',');
-  box.innerHTML = sources.map(s => {
+  const accept0 = (CFG.accepted || ['.xlsx','.xls','.csv']).join(',');
+  const card = s => { const accept = (s.accept || []).join(',') || accept0;
     const parts = (s.parts || []).slice(0, 3).map(p => [p.format, p.sheet ? '«' + p.sheet + '»' : '', p.encoding, p.delimiter ? 'sep ' + p.delimiter : '', p.profile].filter(Boolean).join(' · ')).filter(Boolean);
     return `<div class="slot ${s.loaded ? 'loaded' : ''}">
       <div class="lab">${esc((LANG === 'zh' && s.label_zh) || (LANG === 'en' && s.label_en) || s.label)}</div>
@@ -459,7 +500,9 @@ async function renderSlots(){
         <button class="btn ghost sm" onclick="uploadFile('${s.slot}', ${s.multi})">${T('upload')}</button>
         ${s.loaded ? `<button class="btn ghost sm" onclick="previewSource('${s.slot}')">${T('view')}</button>
         <button class="btn ghost sm" onclick="clearSlot('${s.slot}')">${T('clear')}</button>` : ''}
-      </div></div>`; }).join('');
+      </div></div>`; };
+  box.innerHTML = sources.filter(s => !s.package).map(card).join('');
+  document.getElementById('pkgSlots').innerHTML = sources.filter(s => s.package).map(card).join('');   // ВЭД-пакет
 }
 
 async function uploadFile(slot, multi){
@@ -472,9 +515,9 @@ async function uploadFile(slot, multi){
     const d = await api('/api/upload/' + slot + (ap && ap.checked ? '?append=true' : ''), {method:'POST', body:fd});
     toast(`${T('uploaded')}: ${d.rows} ${T('rows')}` + ((d.info.warnings||[]).length ? ' · ⚠ ' + d.info.warnings.join('; ') : ''));
   } catch(e){ toast('⚠ ' + e.message); return; }
-  renderSlots(); renderDecl(); renderJournal();
+  renderSlots(); renderDecl(); renderPkg(); renderJournal();
 }
-async function clearSlot(slot){ await api('/api/upload/' + slot, {method:'DELETE'}); renderSlots(); renderDecl(); renderJournal(); }
+async function clearSlot(slot){ await api('/api/upload/' + slot, {method:'DELETE'}); renderSlots(); renderDecl(); renderPkg(); renderJournal(); }
 
 async function previewSource(slot){
   const d = await api('/api/sources/' + slot + '/preview?limit=300&lang=' + LANG);
@@ -517,6 +560,32 @@ async function renderDecl(fromSearch){
     </div>`).join('') + (items.length > 100 ? `<p class="muted">… ${items.length - 100}</p>` : '');
 }
 
+// ============================== ВЭД-пакет: документы отгрузки ==============================
+const PKG_SLOTS = [['invoice','pkg_invoice'], ['packing','pkg_packing'], ['transport','pkg_transport'], ['conformity','pkg_conformity']];
+let pkgSlot = 'invoice', pkgCache = {};
+async function renderPkg(fromSearch){
+  if(!fromSearch || !pkgCache[pkgSlot]){
+    await Promise.all(PKG_SLOTS.map(async ([sl]) => {
+      try { pkgCache[sl] = await api('/api/package-docs/' + sl); } catch(e){ pkgCache[sl] = {documents: [], count: 0}; } }));
+  }
+  document.getElementById('pkgTabs').innerHTML = PKG_SLOTS.map(([sl, k]) =>
+    `<button class="tab ${sl === pkgSlot ? 'active' : ''}" onclick="pkgSlot='${sl}';renderPkg(true)">${T(k)}${pkgCache[sl] && pkgCache[sl].count ? ' (' + pkgCache[sl].count + ')' : ''}</button>`).join('');
+  const d = pkgCache[pkgSlot], box = document.getElementById('pkgBox');
+  if(!d.documents.length){ box.innerHTML = `<p class="muted">${T('pkg_none')}</p>`; return; }
+  const q = (document.getElementById('pkgSearch').value || '').toLowerCase();
+  const items = d.documents.filter(x => !q || JSON.stringify(x).toLowerCase().includes(q));
+  const lab = (o) => LANG === 'zh' ? o.label_zh : LANG === 'en' ? o.key : o.label_ru;
+  const lab2 = (o) => LANG === 'zh' ? o.label_ru : o.label_zh;
+  box.innerHTML = items.slice(0, 100).map(x => `
+    <div class="decl"><div class="dh">${esc(x.number)} <span class="muted">${T('pkg_lines')}: ${x.lines.length}</span></div>
+      <div class="kv">${x.header.map(h => `<div><b>${esc(lab(h))}<small>${esc(lab2(h) !== lab(h) ? lab2(h) : '')}</small></b>${esc(h.value)}</div>`).join('')}</div>
+      ${x.lines.length ? `<div class="tbl-wrap" style="border:0;border-radius:0;max-height:300px"><table>
+        <tr>${x.lines_columns.map(c => `<th>${esc(lab(c))}<small>${esc(lab2(c) !== lab(c) ? lab2(c) : '')}</small></th>`).join('')}</tr>
+        ${x.lines.map(g => '<tr>' + x.lines_columns.map(c => `<td>${esc(g[c.key])}</td>`).join('') + '</tr>').join('')}
+      </table></div>` : ''}
+    </div>`).join('') + (items.length > 100 ? `<p class="muted">… ${items.length - 100}</p>` : '');
+}
+
 // ============================== scans ==============================
 async function uploadScans(){
   const inp = document.getElementById('scanInput');
@@ -525,7 +594,7 @@ async function uploadScans(){
   for(const f of inp.files) fd.append('files', f);
   toast('OCR…');
   try {
-    const d = await api('/api/scans/upload', {method:'POST', body:fd});
+    const d = await api('/api/scans/upload?kind=' + (document.getElementById('scanKind').value || 'auto'), {method:'POST', body:fd});
     toast(`${T('scan_done')}: ${d.ok}/${d.processed}`);
     renderScanFiles(d.results); renderScanPreview(); renderJournal();
   } catch(e){ toast('OCR: ' + e.message); }
@@ -538,7 +607,8 @@ function renderScanFiles(results){
     if(!r.ok){ div.innerHTML = `<h4>✗ ${esc(r.file)}</h4><span class="muted">${esc(r.error||'')}</span>`; }
     else {
       const chips = Object.entries(r.fields).map(([f, rec]) => `<span class="fld fld-${rec.status}">${esc(f)}: ${rec.value ? esc(rec.value) : '—'}</span>`).join('');
-      div.innerHTML = `<h4>✓ ${esc(r.file)} <span class="muted">(${r.pages} ${T('pages')}, ${esc((r.langs||[]).join('+'))}${r.text_layer_pages ? ', text layer: ' + r.text_layer_pages : ''})</span></h4><div>${chips}</div><div class="excerpt">${esc(r.text_excerpt||'')}</div>`;
+      const kindT = r.package_kind ? `<span class="badge b-kind">${esc(T('pkg_' + r.package_kind))}</span> ` : '';
+      div.innerHTML = `<h4>✓ ${kindT}${esc(r.file)} <span class="muted">(${r.pages} ${T('pages')}, ${esc((r.langs||[]).join('+'))}${r.text_layer_pages ? ', text layer: ' + r.text_layer_pages : ''})</span></h4><div>${chips}</div><div class="excerpt">${esc(r.text_excerpt||'')}</div>`;
     }
     box.appendChild(div);
   }
@@ -559,7 +629,7 @@ async function renderScanPreview(){
   } catch(e){}
 }
 async function scansToSource(){
-  try { const d = await api('/api/scans/to-source', {method:'POST'}); toast(JSON.stringify(d.added)); renderSlots(); renderDecl(); renderJournal(); }
+  try { const d = await api('/api/scans/to-source', {method:'POST'}); toast(JSON.stringify(d.added)); pkgCache = {}; renderSlots(); renderDecl(); renderPkg(); renderJournal(); }
   catch(e){ toast('⚠ ' + e.message); }
 }
 async function clearScans(){

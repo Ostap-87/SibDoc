@@ -150,6 +150,71 @@ sources:
     sections: {}
     required_columns: []
 
+  # ================================================================ ВЭД-пакет
+  # Документы отгрузки. package: <вид> — слот пакета ВЭД: Excel/CSV (строка на
+  # товарную позицию; шапка документа — повторяется в колонках или блоком над
+  # таблицей), PDF с текстовым слоем и сканы (OCR, паттерны config/scan_fields.yaml →
+  # package). aliases — колонка распознана как одно поле, а в этом документе это другое
+  # (например, «Цена» в инвойсе — цена за единицу, а не цена SAP). units — в чём веса,
+  # если в заголовке колонки единица не указана (kg | t); «Брутто, т», «(MT)», «吨» — тонны сами.
+  invoice:
+    label: "Коммерческий инвойс (Excel / CSV / PDF / скан)"
+    label_en: "Commercial invoice (Excel / CSV / PDF / scan)"
+    label_zh: "商业发票（Excel / CSV / PDF / 扫描件）"
+    required: false
+    canonical: true
+    multi: true
+    package: invoice
+    aliases: {sap_price: unit_price, sap_currency: currency, decl_total_net_weight: net_weight_total}
+    units: {net_weight: kg, gross_weight: kg}
+    sections:
+      header: [invoice_no, invoice_date, currency, incoterms, contract]
+      goods:  [product_name, qty, unit_price, total_value, net_weight]
+    required_columns: [invoice_no]
+
+  packing:
+    label: "Упаковочный лист (Excel / CSV / PDF / скан)"
+    label_en: "Packing list (Excel / CSV / PDF / scan)"
+    label_zh: "装箱单（Excel / CSV / PDF / 扫描件）"
+    required: false
+    canonical: true
+    multi: true
+    package: packing
+    aliases: {sap_price: unit_price, decl_total_net_weight: net_weight_total}
+    units: {net_weight: kg, gross_weight: kg}
+    sections:
+      header: [packing_no, invoice_no]
+      goods:  [container, packages, net_weight, gross_weight]
+    required_columns: [container]
+
+  transport:
+    label: "Транспортный документ: CMR, коносамент B/L, СМГС, AWB"
+    label_en: "Transport document: CMR, B/L, SMGS rail waybill, AWB"
+    label_zh: "运输单据：CMR、提单、国际铁路联运运单、空运单"
+    required: false
+    canonical: true
+    multi: true
+    package: transport
+    aliases: {decl_total_net_weight: net_weight_total}
+    units: {gross_weight: kg}
+    sections:
+      header: [doc_type, bill_of_lading, transport_doc_date]
+      goods:  [container, seal_no, packages, gross_weight]
+    required_columns: [bill_of_lading]
+
+  conformity:
+    label: "Сертификаты: соответствие ЕАЭС, происхождение (СТ-1 / Form A / Form E / CO)"
+    label_en: "Certificates: EAEU conformity, origin (ST-1 / Form A / Form E / CO)"
+    label_zh: "证书：欧亚经济联盟合格证、原产地证书（ST-1 / Form A / Form E / CO）"
+    required: false
+    canonical: true
+    multi: true
+    package: conformity
+    sections:
+      header: [doc_type, cert_no, issue_date, expiry_date]
+      goods:  [product_name, hs_code, origin_country]
+    required_columns: [cert_no]
+
 # ----------------------------------------------------------------
 # ПРОВЕРКИ (вкл/выкл + ссылка на файл правил)
 # Параметры, которые может менять специалист без программиста, —
@@ -164,6 +229,8 @@ checks:
   decl_elements:   {enabled: true, rules: "decl_elements.yaml"}
   contracts:       {enabled: true, rules: "contracts.yaml"}
   cross_border:    {enabled: true, rules: "cross_border.yaml"}
+  # ВЭД-пакет: инвойс, упаковочный лист, транспортный документ, ДТ, 报关单, сертификаты
+  docs_package:    {enabled: true, rules: "docs_package.yaml"}
 
 # ----------------------------------------------------------------
 # DATA-QUALITY ДЕТЕКЦИЯ
@@ -180,6 +247,10 @@ data_quality:
     purchase: ["Price", "Net weight"]
     ru_dt: [net_weight, total_value]
     cn_dec: [net_weight, unit_price, total_value]
+    # ВЭД-пакет
+    invoice: [qty, unit_price, total_value, net_weight, gross_weight, packages, invoice_total]
+    packing: [qty, net_weight, gross_weight, packages]
+    transport: [gross_weight, packages]
 
 # ----------------------------------------------------------------
 # ВЫВОД

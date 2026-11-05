@@ -1,7 +1,8 @@
 from __future__ import annotations
 # -*- coding: utf-8 -*-
 """PDF-отчёт: сводка, источники, качество данных, отклонения по проверкам,
-декларации «ДТ РФ» и «报关单 КНР» целиком (шапка + товары), курсы пересчёта.
+декларации «ДТ РФ» и «报关单 КНР» целиком (шапка + товары), курсы пересчёта,
+пакет документов ВЭД по отгрузкам (комплект + основные поля документов).
 
 Шрифты: латиница и кириллица — DejaVu Sans; китайские иероглифы — шрифт CJK
 (WenQuanYi, Microsoft YaHei, SimSun, Arial Unicode — что найдётся в системе;
@@ -112,6 +113,18 @@ PDF_COLUMNS = {
     "contracts": ["container", "decl_num", "cd_contract", "sap_contract", "status", "detail"],
     "cross_border": ["level", "decl_ru", "decl_cn", "containers", "checks", "status", "detail"],
 }
+# ВЭД-пакет
+PDF_COLUMNS["docs_package"] = ["shipment", "level", "checks", "status", "detail", "detail_zh"]
+PKG_COLUMNS = {
+    "invoice": ["invoice_no", "invoice_date", "currency", "incoterms", "container", "product_name", "qty",
+                "total_value", "invoice_total", "net_weight", "gross_weight", "packages"],
+    "packing": ["packing_no", "invoice_no", "container", "seal_no", "product_name", "packages", "net_weight",
+                "gross_weight"],
+    "transport": ["doc_type", "bill_of_lading", "transport_doc_date", "container", "seal_no", "packages",
+                  "gross_weight", "gross_weight_total"],
+    "conformity": ["doc_type", "cert_no", "issue_date", "expiry_date", "product_name", "hs_code", "origin_country",
+                   "invoice_no"],
+}
 RU_HEADER = ["decl_ru", "decl_date", "procedure", "consignor", "consignee", "contract", "currency", "total_value",
              "incoterms", "delivery_place", "customs_office", "source_file"]
 RU_GOODS = ["item_no", "hs_code", "product_name", "container", "net_weight", "gross_weight", "total_value",
@@ -186,7 +199,7 @@ def _table(df: pd.DataFrame, st, headers: list[str] | None = None, max_rows: int
 
 
 def _widths(cols: list[str], avail: float) -> list[float]:
-    weight = {"detail": 3.2, "checks": 2.2, "product_name": 2.0, "decl_elements": 2.6, "sap_lines": 2.4,
+    weight = {"detail": 3.2, "detail_zh": 2.6, "checks": 2.2, "docs": 2.4, "shipment": 1.4, "product_name": 2.0, "decl_elements": 2.6, "sap_lines": 2.4,
               "issue": 3.0, "impact": 2.0, "examples": 2.0, "consignor": 1.8, "consignee": 1.8, "containers": 1.6,
               "container": 1.3, "level": 1.4, "source_file": 1.6}
     ws = [weight.get(c, 1.0) for c in cols]
@@ -233,6 +246,34 @@ def _declarations(el: list, src, slot: str, st, avail, max_decl: int = 60):
             el.append(Spacer(1, 3))
             el.append(_table(grp[gcols], st, [labels.bilingual(c) for c in gcols],
                              widths=_widths(gcols, avail)))
+
+
+def _package_section(el: list, result: RunResult, st, avail) -> None:
+    """ВЭД-пакет: комплект документов по отгрузкам и документы пакета (основные поля)."""
+    out = result.outputs.get("docs_package")
+    ships = (out.meta.get("shipments") if out is not None else None) or []
+    have = [slot for slot in labels.PACKAGE_SHEETS if result.sources.get(slot) is not None
+            and not result.sources[slot].df.empty]
+    if not ships and not have:
+        return
+    from app.services.package_docs import KIND_LABELS
+    el.append(PageBreak())
+    el.append(Paragraph(rich("Пакет документов ВЭД по отгрузкам / 外贸单证包"), st["h2"]))
+    if ships:
+        kinds = ["invoice", "packing", "transport", "ru_dt", "cn_dec", "conformity"]
+        rows = [{"shipment": s["shipment"], **{k: ", ".join(s["docs"].get(k) or []) or "✗" for k in kinds},
+                 "status": s["status"]} for s in ships]
+        df = pd.DataFrame(rows)
+        hdr = [labels.bilingual("shipment")] + [f"{KIND_LABELS[k][0]} / {KIND_LABELS[k][1]}" for k in kinds] + \
+              [labels.bilingual("status")]
+        el.append(_table(df, st, hdr, widths=_widths(list(df.columns), avail)))
+    for slot in have:
+        cols = [c for c in PKG_COLUMNS.get(slot, []) if c in result.sources[slot].df.columns]
+        if not cols:
+            continue
+        el.append(Paragraph(rich(labels.PACKAGE_SHEETS[slot][1]), st["h3"]))
+        el.append(_table(result.sources[slot].df[cols], st, [labels.bilingual(c) for c in cols], max_rows=150,
+                         widths=_widths(cols, avail)))
 
 
 def write_pdf(result: RunResult, cfg: dict, out_path: str) -> str:
@@ -316,5 +357,6 @@ def write_pdf(result: RunResult, cfg: dict, out_path: str) -> str:
             el.append(Paragraph(rich(title), st["h2"]))
             _declarations(el, s, slot, st, avail)
 
+    _package_section(el, result, st, avail)
     doc.build(el, onFirstPage=on_page, onLaterPages=on_page)
     return out_path

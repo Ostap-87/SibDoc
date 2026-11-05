@@ -308,3 +308,181 @@ fields:
     zh: "发货日期"
     type: date
     synonyms: ["Shipment date", shipment_date, "Дата отгрузки", "发货日期", "装运日期"]
+
+  # ================================================================ ВЭД-пакет
+  # Документы отгрузки: коммерческий инвойс, упаковочный лист, транспортный
+  # документ (CMR, коносамент B/L, накладная СМГС, авианакладная AWB),
+  # сертификаты и декларации соответствия ЕАЭС, сертификаты происхождения.
+  # Номер транспортного документа — поле bill_of_lading (см. выше).
+  invoice_no:
+    ru: "№ инвойса"
+    en: "Invoice No."
+    zh: "发票号"
+    type: code
+    synonyms: ["Invoice No", "Invoice number", "Invoice #", "Inv. No", "Commercial invoice No", "№ инвойса",
+               "Номер инвойса", "Инвойс", "Инвойс №", "Номер коммерческого инвойса", "发票号", "发票号码",
+               "发票编号", "商业发票号", "InvoiceNo", "invoice_no"]
+  invoice_date:
+    ru: "Дата инвойса"
+    en: "Invoice date"
+    zh: "发票日期"
+    type: date
+    synonyms: ["Invoice date", "Дата инвойса", "Дата коммерческого инвойса", "发票日期", "开票日期", "invoice_date"]
+  invoice_total:
+    ru: "Сумма инвойса, всего"
+    en: "Invoice total"
+    zh: "发票总金额"
+    type: number
+    synonyms: ["Invoice total", "Total amount", "Grand total", "Сумма инвойса", "Итого по инвойсу",
+               "Всего к оплате", "Итого сумма", "Общая сумма", "发票总金额", "总金额", "合计金额", "invoice_total"]
+  packing_no:
+    ru: "№ упаковочного листа"
+    en: "Packing list No."
+    zh: "装箱单号"
+    type: code
+    synonyms: ["Packing list No", "Packing list number", "PL No", "P/L No", "№ упаковочного листа",
+               "Номер упаковочного листа", "Упаковочный лист №", "装箱单号", "装箱单编号", "packing_no"]
+  packing_date:
+    ru: "Дата упаковочного листа"
+    en: "Packing list date"
+    zh: "装箱单日期"
+    type: date
+    synonyms: ["Packing list date", "PL date", "Дата упаковочного листа", "装箱单日期", "packing_date"]
+  packages:
+    ru: "Кол-во мест"
+    en: "Packages"
+    zh: "件数"
+    type: number
+    synonyms: ["Кол-во мест", "Количество мест", "Число мест", "Мест", "Грузовых мест", "Packages",
+               "No. of packages", "Number of packages", "Pkgs", "Quantity of packages", "件数", "包装件数", "箱数",
+               "PackNo", "packages"]
+  packages_total:
+    ru: "Мест всего"
+    en: "Packages, total"
+    zh: "总件数"
+    type: number
+    synonyms: ["Total packages", "Мест всего", "Итого мест", "Всего мест", "总件数", "合计件数", "packages_total"]
+  package_type:
+    ru: "Вид упаковки"
+    en: "Package type"
+    zh: "包装种类"
+    type: text
+    synonyms: ["Вид упаковки", "Тип упаковки", "Упаковка", "Package type", "Kind of packages", "Packing",
+               "包装种类", "包装方式", "包装类型", "WrapType", "package_type"]
+  seal_no:
+    ru: "№ пломбы"
+    en: "Seal No."
+    zh: "封号"
+    type: code
+    synonyms: ["Пломба", "№ пломбы", "Номер пломбы", "Пломбы", "ЗПУ", "Seal", "Seal No", "Seal number",
+               "Seals", "封号", "封志号", "铅封号", "封条号", "SealNo", "seal_no"]
+  net_weight_total:
+    ru: "Нетто всего"
+    en: "Net weight, total"
+    zh: "总净重"
+    type: number
+    synonyms: ["Total net weight", "Нетто всего", "Итого нетто", "Вес нетто всего", "Всего нетто",
+               "合计净重", "net_weight_total"]
+  gross_weight_total:
+    ru: "Брутто всего"
+    en: "Gross weight, total"
+    zh: "总毛重"
+    type: number
+    synonyms: ["Total gross weight", "Брутто всего", "Итого брутто", "Вес брутто всего", "Всего брутто",
+               "合计毛重", "gross_weight_total"]
+  qty_total:
+    ru: "Количество всего"
+    en: "Quantity, total"
+    zh: "总数量"
+    type: number
+    synonyms: ["Total quantity", "Количество всего", "Итого количество", "总数量", "qty_total"]
+  transport_doc_date:
+    ru: "Дата транспортного документа"
+    en: "Transport document date"
+    zh: "运单日期"
+    type: date
+    synonyms: ["Дата накладной", "Дата транспортного документа", "Дата коносамента", "Transport document date",
+               "B/L date", "Date of B/L", "CMR date", "Waybill date", "AWB date", "提单日期", "运单日期",
+               "签单日期", "transport_doc_date"]
+  doc_type:
+    ru: "Вид документа"
+    en: "Document type"
+    zh: "单证类型"
+    type: code
+    synonyms: ["Вид документа", "Тип документа", "Document type", "Doc type", "Type of document",
+               "单证类型", "单据类型", "证书类型", "doc_type"]
+  cert_no:
+    ru: "№ сертификата / декларации"
+    en: "Certificate / declaration No."
+    zh: "证书编号"
+    type: code
+    synonyms: ["№ сертификата", "Номер сертификата", "Сертификат №", "№ декларации о соответствии",
+               "Номер декларации о соответствии", "Регистрационный номер сертификата", "Certificate No",
+               "Certificate number", "Cert No", "证书编号", "证书号", "原产地证书号", "cert_no"]
+  issue_date:
+    ru: "Дата выдачи"
+    en: "Date of issue"
+    zh: "签发日期"
+    type: date
+    synonyms: ["Дата выдачи", "Дата регистрации", "Дата оформления", "Date of issue", "Issue date",
+               "Issued on", "签发日期", "发证日期", "签证日期", "issue_date"]
+  expiry_date:
+    ru: "Действителен до"
+    en: "Valid until"
+    zh: "有效期至"
+    type: date
+    synonyms: ["Действителен до", "Срок действия", "Срок действия до", "Дата окончания действия",
+               "Valid until", "Valid till", "Expiry date", "Expiration date", "有效期至", "有效截止日期",
+               "失效日期", "expiry_date"]
+  issuer:
+    ru: "Кем выдан"
+    en: "Issued by"
+    zh: "签发机构"
+    type: text
+    synonyms: ["Кем выдан", "Орган по сертификации", "Выдан", "Issued by", "Issuing authority",
+               "签发机构", "发证机构", "签证机构", "issuer"]
+  seller:
+    ru: "Продавец"
+    en: "Seller"
+    zh: "卖方"
+    type: text
+    synonyms: ["Продавец", "Seller", "Exporter (seller)", "卖方", "售方", "seller"]
+  buyer:
+    ru: "Покупатель"
+    en: "Buyer"
+    zh: "买方"
+    type: text
+    synonyms: ["Покупатель", "Buyer", "买方", "购方", "buyer"]
+  presented_docs:
+    ru: "Документы декларации (гр. 44)"
+    en: "Documents in declaration"
+    zh: "随附单证"
+    type: text
+    synonyms: ["Документы гр. 44", "Графа 44", "Представленные документы", "Presented documents",
+               "随附单证", "随附单据", "presented_docs"]
+
+# ---------------------------------------------------------------- ВЭД-пакет
+# Дополнительные синонимы для полей, объявленных выше (добавляются к их списку
+# synonyms; на совпадение с чужим синонимом не влияют — выигрывает поле выше).
+extra_synonyms:
+  bill_of_lading: ["B/L No", "Bill of lading No", "№ коносамента", "Номер коносамента", "CMR No", "№ CMR",
+                   "Номер CMR", "№ накладной", "Номер накладной", "Накладная №", "Накладная СМГС",
+                   "№ накладной СМГС", "SMGS No", "AWB No", "Air waybill No", "Waybill No",
+                   "Номер транспортного документа", "Транспортный документ", "Transport document No",
+                   "运单号", "铁路运单号", "空运单号", "transport_doc_no"]
+  net_weight: ["Net", "N.W.", "NW", "Net weight, kg", "Net wt", "Нетто, кг", "Вес нетто (кг)", "净重(KG)",
+               "净重（公斤）", "净重(公斤)"]
+  gross_weight: ["Gross", "G.W.", "GW", "Gross weight, kg", "Gross wt", "Брутто, кг", "Вес брутто (кг)",
+                 "毛重(KG)", "毛重（公斤）", "毛重(公斤)"]
+  origin_country: ["Country of origin", "Origin", "Страна происх.", "Происхождение", "原产地", "原产国别"]
+  consignor: ["Shipper", "Грузоотправитель", "托运人"]
+  consignee: ["Consignee", "Грузополучатель", "收货单位"]
+  product_name: ["Description of goods", "Goods", "Продукция", "Наименование продукции", "货物名称", "货物描述"]
+  hs_code: ["Код ТН ВЭД ЕАЭС", "ТН ВЭД ЕАЭС", "H.S. code", "HS", "海关编码", "海关商品编码"]
+  total_value: ["Сумма", "Стоимость, всего", "Amount, total", "金额"]
+  incoterms: ["Terms of delivery", "Delivery terms", "Базис поставки", "Условия поставки (Инкотермс)", "价格条款",
+              "交货条件"]
+  item_no: ["№ п/п", "No.", "Item", "Позиция", "序号"]
+  qty: ["Qty", "Q-ty", "Кол-во товара"]
+  unit: ["Ед.", "Ед", "Unit of measure", "UOM"]
+  container: ["Container No.", "Container Nos", "Контейнер №", "柜号"]

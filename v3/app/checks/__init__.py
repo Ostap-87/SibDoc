@@ -35,3 +35,5 @@ def run_check(check_id: str, sources: dict, rules: dict, cfg: dict) -> CheckOutp
 from app.checks import (  # noqa: E402,F401
     completeness, price, hs_code, incoterms, decl_elements, contracts, cross_border,
 )
+# ВЭД-пакет: сверка документов отгрузки (инвойс, упаковочный лист, накладная, ДТ, 报关单, сертификаты)
+from app.checks import docs_package  # noqa: E402,F401

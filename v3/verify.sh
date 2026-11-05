@@ -2,8 +2,8 @@
 # ============================================================
 #  PostControl Suite — проверка работоспособности.
 #  1) Эталонные данные: числа сверяются с эталоном (docs/SPECIALIST_GUIDE.md §8).
-#  2) Демо-набор (вымышленные ДТ РФ, 报关单, SAP): сквозная сверка находит
-#     все заложенные расхождения.
+#  2) Демо-набор (вымышленные ДТ РФ, 报关单, SAP, пакет документов отгрузки):
+#     сквозная сверка и «Пакет документов» находят все заложенные расхождения.
 # ============================================================
 cd "$(dirname "$0")"
 LOG=$(mktemp -t pcs_verify.XXXXXX)
@@ -25,7 +25,9 @@ $RUN --wide data/wide_table.xlsx --purchase data/purchase.xlsx | tee "$LOG"
 echo "---------------------------------------------------"
 $RUN --wide data/demo/wide_table_demo.xlsx --purchase data/demo/purchase_demo.xlsx \
      --ru-dt "data/demo/ru_dt/*.xml" --cn-dec data/demo/cn_dec_demo.xlsx \
-     --sap-vs-cd data/demo/sap_vs_cd_demo.csv > "$LOG2"
+     --sap-vs-cd data/demo/sap_vs_cd_demo.csv \
+     --invoice "data/demo/package/invoice/*" --packing "data/demo/package/packing/*" \
+     --transport "data/demo/package/transport/*" --conformity "data/demo/package/conformity/*" > "$LOG2"
 grep -E "total=|курс:" "$LOG2"
 
 echo "---------------------------------------------------"
@@ -43,6 +45,7 @@ check "$LOG"  "post_control_report\.pdf"                       "PDF-отчёт �
 check "$LOG2" "0\. Completeness +total=5 +OK=4 +ISSUE=1"       "демо: полнота — 1 декларации нет в ручной таблице"
 check "$LOG2" "1\. Price +total=7 +OK=5 +ISSUE=1 +REVIEW=1"    "демо: цена — 1 расхождение, 1 совпадение через курс (или «нет курса»)"
 check "$LOG2" "6\. .* +total=11 +OK=6 +ISSUE=4 +REVIEW=1"      "демо: ДТ ↔ 报关单 ↔ SAP — 4 расхождения (цена, вес, код, ДТ нет в SAP)"
+check "$LOG2" "7\. .* +total=37 +OK=28 +ISSUE=7 +REVIEW=2"     "демо: пакет ВЭД — 7 расхождений (брутто, нет уп. листа, сумма ×3, истёк сертификат, страна)"
 
 rm -f "$LOG" "$LOG2"
 echo "---------------------------------------------------"

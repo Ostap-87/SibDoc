@@ -36,7 +36,23 @@
         <cat_ru:PrDocumentDate>2026-01-10</cat_ru:PrDocumentDate>
         <catESAD_cu:PresentedDocumentModeCode>03011</catESAD_cu:PresentedDocumentModeCode>
       </ESADout_CUPresentedDocument>
-      <catESAD_cu:ESADContainer>
+      <ESADout_CUPresentedDocument>
+        <cat_ru:PrDocumentName>хмбния</cat_ru:PrDocumentName>
+        <cat_ru:PrDocumentNumber>INV-DEMO-2605</cat_ru:PrDocumentNumber>
+        <cat_ru:PrDocumentDate>2026-09-17</cat_ru:PrDocumentDate>
+        <catESAD_cu:PresentedDocumentModeCode>04021</catESAD_cu:PresentedDocumentModeCode>
+      </ESADout_CUPresentedDocument>
+      <ESADout_CUPresentedDocument>
+        <cat_ru:PrDocumentName>CMR</cat_ru:PrDocumentName>
+        <cat_ru:PrDocumentNumber>CMR-DEMO-0005</cat_ru:PrDocumentNumber>
+        <cat_ru:PrDocumentDate>2026-09-20</cat_ru:PrDocumentDate>
+        <catESAD_cu:PresentedDocumentModeCode>02015</catESAD_cu:PresentedDocumentModeCode>
+      </ESADout_CUPresentedDocument>
+      <ESADout_CUPresentedDocument>
+        <cat_ru:PrDocumentName>яепрхтхйюр яннрберярбхъ еющя</cat_ru:PrDocumentName>
+        <cat_ru:PrDocumentNumber>еющя RU я-RU.делн02.б.00205/24</cat_ru:PrDocumentNumber>
+        <cat_ru:PrDocumentDate>2024-03-01</cat_ru:PrDocumentDate>
+      </ESADout_CUPresentedDocument>      <catESAD_cu:ESADContainer>
         <catESAD_cu:ContainerQuantity>1</catESAD_cu:ContainerQuantity>
         <catESAD_cu:ContainerNumber><catESAD_cu:ContainerIdentificaror>DEMU0001075</catESAD_cu:ContainerIdentificaror></catESAD_cu:ContainerNumber>
       </catESAD_cu:ESADContainer>

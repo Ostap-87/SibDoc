@@ -27,6 +27,14 @@ from app.services import xml_decl
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 TABLE_EXTS = (".xlsx", ".xlsm", ".xls", ".csv", ".txt")
 ACCEPTED_EXTS = TABLE_EXTS + (".xml", ".zip")
+# ВЭД-пакет: в слоты документов отгрузки (sources.<слот>.package) принимаются ещё PDF и сканы
+PACKAGE_EXTRA_EXTS = (".pdf", ".jpg", ".jpeg", ".png", ".tif", ".tiff", ".bmp")
+ALL_EXTS = ACCEPTED_EXTS + PACKAGE_EXTRA_EXTS
+
+
+def accepted_for(slot_cfg: dict | None) -> tuple:
+    """Какие файлы принимает слот (для интерфейса и восстановления загрузок)."""
+    return ALL_EXTS if (slot_cfg or {}).get("package") else ACCEPTED_EXTS
 ENCODINGS = ("utf-8-sig", "utf-8", "gb18030", "cp1251")
 MAX_ZIP_TOTAL = 300 * 1024 * 1024
 
@@ -116,6 +124,20 @@ def read_table(data: bytes, filename: str, slot: str | None = None,
     slot_cfg = ((cfg or {}).get("sources") or {}).get(slot or "", {}) or {}
     low = filename.lower()
     info: dict = {"file": filename}
+    # --- ВЭД-пакет: инвойс, упаковочный лист, транспортный документ, сертификаты (Excel/CSV/PDF/сканы)
+    if slot_cfg.get("package") and not low.endswith((".zip", ".xml")):
+        from app.services import package_docs
+        try:
+            df, info2 = package_docs.read_document(data, filename, slot_cfg)
+        except package_docs.PackageReadError as exc:
+            raise LoadError(str(exc))
+        info.update(info2)
+        if slot_cfg.get("canonical"):
+            df, mapped2 = fdict.canonicalize(df)
+            info["mapped"] = list(info.get("mapped") or []) + mapped2
+        info.update({"rows": int(len(df)), "columns": int(len(df.columns))})
+        return df, info
+    # --- конец блока ВЭД-пакет
     if low.endswith(".zip"):
         df, info2 = _read_zip(data, slot, cfg)
         info.update(info2)
@@ -151,8 +173,10 @@ def _read_zip(data: bytes, slot, cfg) -> tuple[pd.DataFrame, dict]:
         zf = zipfile.ZipFile(io.BytesIO(data))
     except zipfile.BadZipFile:
         raise LoadError("архив ZIP повреждён")
+    slot_cfg = ((cfg or {}).get("sources") or {}).get(slot or "", {}) or {}
+    exts = (".xml",) + TABLE_EXTS + (PACKAGE_EXTRA_EXTS if slot_cfg.get("package") else ())  # ВЭД-пакет: PDF/сканы
     members = [m for m in zf.infolist() if not m.is_dir()
-               and os.path.splitext(m.filename)[1].lower() in (".xml",) + TABLE_EXTS
+               and os.path.splitext(m.filename)[1].lower() in exts
                and not os.path.basename(m.filename).startswith(("~", "."))]
     if sum(m.file_size for m in members) > MAX_ZIP_TOTAL:
         raise LoadError("архив слишком большой после распаковки (больше 300 МБ)")

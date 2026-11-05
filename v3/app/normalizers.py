@@ -358,3 +358,54 @@ def norm_date(v) -> str:
         return pd.to_datetime(s, dayfirst=True).strftime("%Y-%m-%d")
     except (ValueError, TypeError, OverflowError):
         return ""
+
+
+# ===================================================================== ВЭД-пакет
+# Номера документов пакета (инвойс, упаковочный лист, накладная, сертификат) и страны
+# происхождения. Используются проверкой «Пакет документов» (app/checks/docs_package.py).
+
+def norm_doc_no(v) -> str:
+    """Номер документа для сравнения: латиница, верхний регистр, только буквы и цифры,
+    без «№», «No.», «N». 'Инвойс № INV-2026/001' и 'inv 2026-001' -> 'INV2026001'."""
+    if is_blank(v):
+        return ""
+    if isinstance(v, (float, np.floating)) and float(v).is_integer():
+        v = int(v)
+    s = latinize(v)
+    s = re.sub(r"^\s*(?:№|NO\.|NO\s|N\s|N°|Nº|#)\s*", "", s)
+    return re.sub(r"[^0-9A-ZЀ-ӿ一-鿿]", "", s.replace("№", ""))
+
+
+# страна -> код ISO 3166-1 alpha-2: двух- и трёхбуквенные коды, названия RU / EN / ZH
+_COUNTRIES = {
+    "RU": ("RU", "RUS", "643", "РОССИЯ", "РОССИЙСКАЯ ФЕДЕРАЦИЯ", "РФ", "RUSSIA", "RUSSIAN FEDERATION",
+           "俄罗斯", "俄罗斯联邦", "俄国"),
+    "CN": ("CN", "CHN", "156", "КИТАЙ", "КНР", "КИТАЙСКАЯ НАРОДНАЯ РЕСПУБЛИКА", "CHINA",
+           "PEOPLE'S REPUBLIC OF CHINA", "PRC", "中国", "中华人民共和国"),
+    "KZ": ("KZ", "KAZ", "398", "КАЗАХСТАН", "РЕСПУБЛИКА КАЗАХСТАН", "KAZAKHSTAN", "哈萨克斯坦"),
+    "BY": ("BY", "BLR", "112", "БЕЛАРУСЬ", "БЕЛОРУССИЯ", "РЕСПУБЛИКА БЕЛАРУСЬ", "BELARUS", "白俄罗斯"),
+    "MN": ("MN", "MNG", "496", "МОНГОЛИЯ", "MONGOLIA", "蒙古", "蒙古国"),
+    "KG": ("KG", "KGZ", "417", "КИРГИЗИЯ", "КЫРГЫЗСТАН", "KYRGYZSTAN", "吉尔吉斯斯坦"),
+    "UZ": ("UZ", "UZB", "860", "УЗБЕКИСТАН", "UZBEKISTAN", "乌兹别克斯坦"),
+    "AM": ("AM", "ARM", "051", "АРМЕНИЯ", "ARMENIA", "亚美尼亚"),
+    "DE": ("DE", "DEU", "276", "ГЕРМАНИЯ", "GERMANY", "德国"),
+    "US": ("US", "USA", "840", "США", "UNITED STATES", "UNITED STATES OF AMERICA", "美国"),
+    "JP": ("JP", "JPN", "392", "ЯПОНИЯ", "JAPAN", "日本"),
+    "KR": ("KR", "KOR", "410", "КОРЕЯ", "РЕСПУБЛИКА КОРЕЯ", "SOUTH KOREA", "KOREA", "韩国"),
+    "TR": ("TR", "TUR", "792", "ТУРЦИЯ", "TURKEY", "TÜRKIYE", "土耳其"),
+    "IN": ("IN", "IND", "356", "ИНДИЯ", "INDIA", "印度"),
+    "VN": ("VN", "VNM", "704", "ВЬЕТНАМ", "VIET NAM", "VIETNAM", "越南"),
+}
+_COUNTRY_INDEX = {re.sub(r"\s+", " ", n.upper()): code for code, names in _COUNTRIES.items() for n in names}
+
+
+def norm_country(v) -> str:
+    """Страна -> 'RU', 'CN', … (ISO alpha-2). 'Россия', 'RUS', '俄罗斯' -> 'RU'.
+    Неизвестное название возвращается как есть (верхний регистр)."""
+    s = norm_text(v).upper().strip(" .,")
+    if not s:
+        return ""
+    if s in _COUNTRY_INDEX:
+        return _COUNTRY_INDEX[s]
+    lat = latinize(s)
+    return _COUNTRY_INDEX.get(lat, s)

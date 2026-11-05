@@ -19,3 +19,30 @@ target:
   service_columns:
     file:   "Source file"
     status: "Extract status"
+
+# ================================================================
+# ВЭД-пакет: распознанные документы отгрузки — отдельный лист на вид
+# документа (поле -> колонка). Декларации остаются на листе target.sheet.
+# ================================================================
+package:
+  invoice:
+    sheet: "INVOICE"
+    columns: {invoice_no: "Invoice No", invoice_date: "Invoice date", contract: "Contract", currency: "Currency",
+              incoterms: "Incoterms", invoice_total: "Total amount", net_weight_total: "Net weight",
+              gross_weight_total: "Gross weight", packages_total: "Packages", container: "Container No",
+              hs_code: "HS code"}
+  packing:
+    sheet: "PACKING_LIST"
+    columns: {packing_no: "Packing list No", invoice_no: "Invoice No", packing_date: "Date", container: "Container No",
+              seal_no: "Seal No", packages_total: "Packages", net_weight_total: "Net weight",
+              gross_weight_total: "Gross weight"}
+  transport:
+    sheet: "TRANSPORT_DOC"
+    columns: {doc_type: "Document type", bill_of_lading: "Document No", transport_doc_date: "Date",
+              container: "Container No", seal_no: "Seal No", packages_total: "Packages",
+              gross_weight_total: "Gross weight"}
+  conformity:
+    sheet: "CERTIFICATE"
+    columns: {doc_type: "Document type", cert_no: "Certificate No", issue_date: "Date of issue",
+              expiry_date: "Valid until", hs_code: "HS code", origin_country: "Country of origin",
+              invoice_no: "Invoice No"}

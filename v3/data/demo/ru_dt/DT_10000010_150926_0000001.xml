@@ -36,7 +36,23 @@
         <cat_ru:PrDocumentDate>2026-01-10</cat_ru:PrDocumentDate>
         <catESAD_cu:PresentedDocumentModeCode>03011</catESAD_cu:PresentedDocumentModeCode>
       </ESADout_CUPresentedDocument>
-      <catESAD_cu:ESADContainer>
+      <ESADout_CUPresentedDocument>
+        <cat_ru:PrDocumentName>хмбния</cat_ru:PrDocumentName>
+        <cat_ru:PrDocumentNumber>INV-DEMO-2601</cat_ru:PrDocumentNumber>
+        <cat_ru:PrDocumentDate>2026-09-13</cat_ru:PrDocumentDate>
+        <catESAD_cu:PresentedDocumentModeCode>04021</catESAD_cu:PresentedDocumentModeCode>
+      </ESADout_CUPresentedDocument>
+      <ESADout_CUPresentedDocument>
+        <cat_ru:PrDocumentName>мюйкюдмюъ ялця</cat_ru:PrDocumentName>
+        <cat_ru:PrDocumentNumber>SMGS-26-0001</cat_ru:PrDocumentNumber>
+        <cat_ru:PrDocumentDate>2026-09-16</cat_ru:PrDocumentDate>
+        <catESAD_cu:PresentedDocumentModeCode>02013</catESAD_cu:PresentedDocumentModeCode>
+      </ESADout_CUPresentedDocument>
+      <ESADout_CUPresentedDocument>
+        <cat_ru:PrDocumentName>дейкюпюжхъ н яннрберярбхх еющя</cat_ru:PrDocumentName>
+        <cat_ru:PrDocumentNumber>еющя N RU д-RU.делн01.б.00101/26</cat_ru:PrDocumentNumber>
+        <cat_ru:PrDocumentDate>2026-01-15</cat_ru:PrDocumentDate>
+      </ESADout_CUPresentedDocument>      <catESAD_cu:ESADContainer>
         <catESAD_cu:ContainerQuantity>2</catESAD_cu:ContainerQuantity>
         <catESAD_cu:ContainerNumber><catESAD_cu:ContainerIdentificaror>DEMU0001012</catESAD_cu:ContainerIdentificaror></catESAD_cu:ContainerNumber><catESAD_cu:ContainerNumber><catESAD_cu:ContainerIdentificaror>DEMU0001028</catESAD_cu:ContainerIdentificaror></catESAD_cu:ContainerNumber>
       </catESAD_cu:ESADContainer>

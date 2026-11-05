@@ -69,6 +69,7 @@ profiles:
       number: [PrDocumentNumber]
       date: [PrDocumentDate]
       contract_codes: ["03011", "03012"]
+      all_field: presented_docs   # ВЭД-пакет: все документы гр. 44 («код номер; …») — ссылки на инвойс, накладную, сертификаты
     code_maps:
       currency: {"156": CNY, "840": USD, "643": RUB, "978": EUR, "398": KZT}
 

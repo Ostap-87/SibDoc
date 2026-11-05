@@ -85,6 +85,29 @@ MIXED_COLUMNS = {"wide_table": ["contract", "container_num"], "purchase": ["Main
                  "ru_dt": ["contract", "container"], "cn_dec": ["contract", "container"]}
 DECL_COLUMNS = {"wide_table": ["decl_num"], "sap_vs_cd": ["decl_num"], "cn_dec": ["decl_cn"]}
 
+# --- ВЭД-пакет: документы отгрузки (инвойс, упаковочный лист, транспортный документ, сертификаты)
+_PKG = ["docs_package"]
+CHECK_COLUMN_DEPS.update({
+    "invoice": {c: _PKG for c in ("invoice_no", "invoice_date", "currency", "incoterms", "container", "product_name",
+                                   "model", "qty", "total_value", "unit_price", "invoice_total", "net_weight",
+                                   "gross_weight", "packages")},
+    "packing": {c: _PKG for c in ("packing_no", "invoice_no", "container", "seal_no", "qty", "net_weight",
+                                   "gross_weight", "packages")},
+    "transport": {c: _PKG for c in ("bill_of_lading", "doc_type", "container", "seal_no", "gross_weight", "packages")},
+    "conformity": {c: _PKG for c in ("cert_no", "doc_type", "issue_date", "expiry_date", "hs_code", "origin_country",
+                                      "invoice_no")},
+})
+for _slot in ("ru_dt", "cn_dec"):
+    for _col in ("container", "total_value", "currency", "incoterms", "hs_code"):
+        CHECK_COLUMN_DEPS[_slot].setdefault(_col, []).append("docs_package")
+CHECK_COLUMN_DEPS["ru_dt"]["presented_docs"] = list(_PKG)
+CHECK_TITLES["docs_package"] = "7. Пакет документов"
+CONTAINER_COLUMNS.update({"invoice": ["container"], "packing": ["container"], "transport": ["container"]})
+# номера сертификатов ЕАЭС («ЕАЭС RU С-RU.…») смешивают алфавиты по формату — их не проверяем
+MIXED_COLUMNS.update({"invoice": ["invoice_no", "container"], "packing": ["invoice_no", "container"],
+                      "transport": ["bill_of_lading", "container"]})
+# --- конец блока ВЭД-пакет
+
 
 def _impact_for(source_slot: str, column: str) -> str:
     checks = CHECK_COLUMN_DEPS.get(source_slot, {}).get(column, [])
