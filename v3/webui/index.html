@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SibDoc · PostControl Suite</title>
+<title>SibDoc 3 · PostControl Suite</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231A56DB'/%3E%3Cpath d='M9 17l5 5 9-11' stroke='white' stroke-width='3.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <style>
   :root{
@@ -14,7 +14,7 @@
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:"Segoe UI","PingFang SC","Microsoft YaHei",Arial,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
-  header{background:var(--blue);color:#fff;padding:12px 24px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;position:sticky;top:0;z-index:20}
+  header{background:var(--blue);color:#fff;padding:10px 24px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;position:sticky;top:0;z-index:20}
   header h1{font-size:18px;font-weight:700}
   header .sub{opacity:.85;font-size:12px}
   header .spacer{flex:1}
@@ -22,11 +22,11 @@
   .lang{display:flex;gap:4px}
   .lang button{background:#ffffff22;color:#fff;border:1px solid #ffffff55;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:13px;font-weight:600}
   .lang button.active{background:#fff;color:var(--blue)}
-  nav.toc{background:#fff;border-bottom:1px solid var(--line);padding:8px 24px;display:flex;gap:6px;flex-wrap:wrap;position:sticky;top:52px;z-index:19}
+  nav.toc{background:#fff;border-bottom:1px solid var(--line);padding:8px 24px;display:flex;gap:6px;flex-wrap:wrap;position:sticky;top:var(--hdr-h,52px);z-index:19}
   nav.toc a{color:var(--blue-d);text-decoration:none;font-size:12.5px;padding:4px 10px;border-radius:6px}
   nav.toc a:hover{background:#eef4ff}
   .wrap{max-width:1320px;margin:0 auto;padding:20px 24px 60px}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin-bottom:18px;scroll-margin-top:110px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin-bottom:18px;scroll-margin-top:calc(var(--hdr-h,52px) + 56px)}
   .card h2{font-size:15px;margin-bottom:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
   .card h3{font-size:13px;margin:10px 0 6px;color:var(--blue-d)}
   .step{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;border-radius:11px;background:var(--blue);color:#fff;font-size:12px}
@@ -109,13 +109,95 @@
   .pkg-head{display:flex;align-items:center;gap:8px;margin:16px 0 4px}
   .b-pkg{background:#e7f6ec;color:#11613a}
   .b-kind{background:#eef2ff;color:#3730a3}
+  /* SibDoc3: два режима — выбор режима и типов документов, переключатель в шапке, реальное время */
+  .seg{display:inline-flex;background:#ffffff22;border:1px solid #ffffff66;border-radius:9px;padding:2px;gap:2px}
+  .seg button{background:transparent;color:#fff;border:0;border-radius:7px;padding:6px 14px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+  .seg button:hover{background:#ffffff26}
+  .seg button.active{background:#fff;color:var(--blue)}
+  .hbtn{background:#ffffff22;color:#fff;border:1px solid #ffffff55;border-radius:7px;padding:5px 10px;font-size:13px;cursor:pointer;white-space:nowrap}
+  .hbtn:hover{background:#ffffff3a}
+  .hbtn.active{background:#fff;color:var(--blue)}
+  .screen-title{font-size:20px;font-weight:700;margin:4px 0 4px}
+  .screen-sub{color:var(--muted);margin-bottom:16px}
+  .typesline a{color:var(--blue-d)}
+  .mcards{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px}
+  .mcard{display:flex;flex-direction:column;gap:10px;text-align:left;background:#fff;border:2px solid var(--line);border-radius:14px;padding:22px 24px;cursor:pointer;font:inherit;color:inherit;transition:.15s;min-height:220px}
+  .mcard:hover{border-color:var(--blue);box-shadow:0 6px 22px #1a56db1f}
+  .mcard.last{border-color:var(--blue)}
+  .mcard .mh{display:flex;align-items:center;gap:14px}
+  .mcard .ico{width:52px;height:52px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex:none}
+  .mcard .ico svg{width:30px;height:30px}
+  .mcard.retro .ico{background:#eef2ff;color:#3730a3}
+  .mcard.rt .ico{background:#e7f6ec;color:#11613a}
+  .mcard .mt{font-size:19px;font-weight:700}
+  .mcard .ms{color:var(--muted);font-size:13.5px}
+  .mcard ul{margin:2px 0 0 18px;color:#334;font-size:13px;line-height:1.55}
+  .mcard .go{margin-top:auto;display:flex;align-items:center;gap:10px}
+  .mcard .lastlab{font-size:11.5px;color:var(--blue-d);background:#eef4ff;border-radius:8px;padding:2px 8px}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:#fff;border-radius:18px;padding:6px 12px;font-size:13px;cursor:pointer;user-select:none}
+  .chip input{accent-color:var(--blue);margin:0}
+  .chip.on{background:#eef4ff;border-color:#9db8f3;color:var(--blue-d);font-weight:600}
+  .chip small{color:var(--muted);font-weight:400}
+  details.others{margin-top:14px;border:1px dashed var(--line);border-radius:8px;padding:8px 12px;background:#fbfcfe}
+  details.others>summary{cursor:pointer;font-weight:600;color:var(--blue-d);font-size:13px}
+  details.others[open]>summary{margin-bottom:10px}
+  .drop{border:2px dashed var(--blue);border-radius:10px;padding:22px 16px;text-align:center;background:#f8faff;cursor:pointer;transition:.15s}
+  .drop:hover,.drop.over{background:#e8f0ff;border-color:var(--blue-d)}
+  .drop b{font-size:15px;color:var(--blue-d)}
+  .drop .muted{margin-top:6px}
+  .flist{margin-top:10px;display:grid;gap:6px}
+  .fitem{display:grid;grid-template-columns:minmax(0,1fr) 170px 280px;gap:10px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:12.5px;background:#fff}
+  .fitem .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bar{height:8px;background:#e8edf5;border-radius:5px;overflow:hidden}
+  .bar i{display:block;height:100%;background:var(--blue);width:0;transition:width .3s}
+  .bar.done i{background:var(--ok)} .bar.err i{background:var(--issue)}
+  .bar.work i{background:linear-gradient(90deg,var(--blue) 0,#7aa5ff 50%,var(--blue) 100%);background-size:200% 100%;animation:sd3bar 1.2s linear infinite}
+  @keyframes sd3bar{from{background-position:200% 0}to{background-position:0 0}}
+  .fitem .fs{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .dtbl td select{max-width:190px;padding:4px 6px;font-size:12.5px}
+  .dtbl td.nm{min-width:220px}
+  @media (max-width:999px){.dtbl td.nm{min-width:0;word-break:break-word}.dtbl td select{max-width:150px}}
+  .dtbl .sub{display:block;color:var(--muted);font-size:11.5px}
+  .conf{font-weight:700} .conf-h{color:var(--ok)} .conf-m{color:var(--review)} .conf-l{color:var(--issue)}
+  .st-rec{background:var(--ok-bg);color:var(--ok)} .st-rev{background:var(--review-bg);color:var(--review)}
+  .st-unk{background:var(--skip-bg);color:var(--skip)} .st-err{background:var(--issue-bg);color:var(--issue)}
+  .srcgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+  .srcbox{border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:#fbfcfe}
+  .srcbox h4{font-size:12.5px;margin-bottom:6px;color:var(--blue-d)}
+  .srcbox label{display:flex;gap:6px;align-items:flex-start;font-size:12.5px;margin:3px 0}
+  .srcbox select{width:100%}
+  .fbtns{display:inline-flex;gap:6px;flex-wrap:wrap}
+  .fbtn{border:1px solid var(--line);background:#fff;border-radius:7px;padding:6px 12px;cursor:pointer;font-size:12.5px;font-weight:600}
+  .fbtn.active{outline:2px solid var(--blue);outline-offset:1px}
+  .fbtn.f-OK{color:var(--ok)} .fbtn.f-ISSUE{color:var(--issue)} .fbtn.f-REVIEW{color:var(--review)}
+  .rtres td.rs{min-width:240px}
+  .rtres .sub{display:block;color:var(--muted);font-size:11px}
+  .rtres td .zh{display:block;color:#555;margin-top:2px}
+  .declsum{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+  .declsum .dcard{border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:12px;background:#fbfcfe}
+  @media (max-width:1440px){header .sub{display:none}}
+  @media (max-width:900px){
+    .mcards{grid-template-columns:1fr}
+    .fitem{grid-template-columns:minmax(0,1fr) 110px;}
+    .fitem .fs{grid-column:1 / -1}
+    header{padding:8px 14px;gap:8px}
+    .wrap{padding:16px 14px 50px}
+    .slots{grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+  }
 </style>
 </head>
 <body>
 <header>
-  <h1>SibDoc</h1>
+  <h1>SibDoc 3</h1>
   <span class="sub" data-i18n="tagline"></span>
   <span class="spacer"></span>
+  <!-- SibDoc3: два режима — переключатель доступен всегда, загруженное не теряется (modes.js) -->
+  <button class="hbtn" id="modeHome" data-sd3="home" title=""></button>
+  <div class="seg" id="modeSeg" role="tablist">
+    <button data-mode="retro" role="tab" data-sd3="seg_retro"></button>
+    <button data-mode="realtime" role="tab" data-sd3="seg_rt"></button>
+  </div>
   <span class="mode hidden" id="modeChip" data-i18n="proto_mode"></span>
   <!-- SibDoc3: закрытый контур — индикатор (заполняет offline.js) -->
   <span class="mode hidden" id="netChip"></span>
@@ -126,13 +208,25 @@
     <button data-lang="zh" onclick="setLang('zh')">中文</button>
   </div>
 </header>
-<nav class="toc">
-  <a href="#c-data" data-i18n="nav_data"></a><a href="#c-decl" data-i18n="nav_decl"></a><a href="#c-pkg" data-i18n="nav_pkg"></a>
+<nav class="toc" id="tocRetro">
+  <a href="#c-bulk" id="navBulk"></a><a href="#c-data" data-i18n="nav_data"></a><a href="#c-decl" data-i18n="nav_decl"></a><a href="#c-pkg" data-i18n="nav_pkg"></a>
   <a href="#c-scan" data-i18n="nav_scan"></a><a href="#c-rates" data-i18n="nav_rates"></a>
   <a href="#c-rules" data-i18n="nav_rules"></a><a href="#c-run" data-i18n="nav_run"></a>
   <a href="#c-journal" data-i18n="nav_journal"></a><a href="#c-conn" data-i18n="nav_conn"></a>
 </nav>
 <div class="wrap">
+
+  <!-- SibDoc3: первый экран — выбор режима и типов документов (заполняет modes.js) -->
+  <section class="screen hidden" id="scr-choose"></section>
+
+  <!-- SibDoc3: режим «Реальное время» — пакет ближайшей отгрузки и проверка до подачи (modes.js) -->
+  <section class="screen hidden" id="scr-rt"></section>
+
+  <!-- SibDoc3: режим «Ретро данные» — пост-контроль (прежний интерфейс) -->
+  <section class="screen hidden" id="scr-retro">
+
+  <!-- SibDoc3: пакетная загрузка в ретро-режиме: документы -> слоты («В сверку») -->
+  <div class="card" id="c-bulk"></div>
 
   <div class="card" id="c-data">
     <h2><span class="step">1</span> <span data-i18n="step1"></span></h2>
@@ -322,6 +416,7 @@
     <div class="tbl-wrap"><table id="uTbl"></table></div>
   </div>
 
+  </section>
 </div>
 <div id="modal" class="hidden"><div class="box"><div class="mh"><b id="mTitle"></b><span class="spacer" style="flex:1"></span>
   <button class="btn ghost sm" onclick="closeModal()" data-i18n="close"></button></div><div class="mb" id="mBody"></div></div></div>
@@ -485,7 +580,7 @@ async function renderSlots(){
   const accept0 = (CFG.accepted || ['.xlsx','.xls','.csv']).join(',');
   const card = s => { const accept = (s.accept || []).join(',') || accept0;
     const parts = (s.parts || []).slice(0, 3).map(p => [p.format, p.sheet ? '«' + p.sheet + '»' : '', p.encoding, p.delimiter ? 'sep ' + p.delimiter : '', p.profile].filter(Boolean).join(' · ')).filter(Boolean);
-    return `<div class="slot ${s.loaded ? 'loaded' : ''}">
+    return `<div class="slot ${s.loaded ? 'loaded' : ''}" data-slot="${esc(s.slot)}">
       <div class="lab">${esc((LANG === 'zh' && s.label_zh) || (LANG === 'en' && s.label_en) || s.label)}</div>
       <div class="meta">
         ${s.required ? `<span class="badge b-req">${T('required')}</span>` : `<span class="badge b-opt">${T('optional')}</span>`}
@@ -503,6 +598,7 @@ async function renderSlots(){
       </div></div>`; };
   box.innerHTML = sources.filter(s => !s.package).map(card).join('');
   document.getElementById('pkgSlots').innerHTML = sources.filter(s => s.package).map(card).join('');   // ВЭД-пакет
+  if(typeof window.sd3AfterSlots === 'function') window.sd3AfterSlots(sources);    // SibDoc3: фильтр по типам документов
 }
 
 async function uploadFile(slot, multi){
@@ -568,7 +664,9 @@ async function renderPkg(fromSearch){
     await Promise.all(PKG_SLOTS.map(async ([sl]) => {
       try { pkgCache[sl] = await api('/api/package-docs/' + sl); } catch(e){ pkgCache[sl] = {documents: [], count: 0}; } }));
   }
-  document.getElementById('pkgTabs').innerHTML = PKG_SLOTS.map(([sl, k]) =>
+  const vis = (typeof window.sd3Visible === 'function') ? PKG_SLOTS.filter(([sl]) => window.sd3Visible(sl)) : PKG_SLOTS;   // SibDoc3
+  if(vis.length && !vis.some(([sl]) => sl === pkgSlot)) pkgSlot = vis[0][0];
+  document.getElementById('pkgTabs').innerHTML = (vis.length ? vis : PKG_SLOTS).map(([sl, k]) =>
     `<button class="tab ${sl === pkgSlot ? 'active' : ''}" onclick="pkgSlot='${sl}';renderPkg(true)">${T(k)}${pkgCache[sl] && pkgCache[sl].count ? ' (' + pkgCache[sl].count + ')' : ''}</button>`).join('');
   const d = pkgCache[pkgSlot], box = document.getElementById('pkgBox');
   if(!d.documents.length){ box.innerHTML = `<p class="muted">${T('pkg_none')}</p>`; return; }
@@ -916,6 +1014,56 @@ async function delUser(l){ await api('/api/users/' + encodeURIComponent(l), {met
 document.addEventListener('keydown', e => { if(e.key === 'Escape') closeModal(); });
 checkAuth();
 </script>
+<script>
+// ============================== Коннекторы/банк: статус коннекторов и оплаты ==============================
+// Отдельный блок: дополняет карточки коннекторов статусом «работает / работает через выгрузки /
+// нужен доступ: что и у кого» (поля status, need, need_from, verified из /api/connectors) и
+// показывает пояснение по-китайски (detail_zh) на вкладке «8. Оплаты» в режиме 中文.
+Object.assign(I18N.ru, {cst_title:"Статус коннекторов РФ–Китай", cst_works:"работает", cst_exports:"работает через выгрузки",
+  cst_needs:"нужен доступ", cst_need:"что нужно", cst_from:"у кого", cst_exp:"какие выгрузки", cst_ver:"проверка", cst_conn:"Коннектор"});
+Object.assign(I18N.en, {cst_title:"RU–CN connector status", cst_works:"working", cst_exports:"working via exports",
+  cst_needs:"access needed", cst_need:"what is needed", cst_from:"from whom", cst_exp:"accepted exports", cst_ver:"verified", cst_conn:"Connector"});
+Object.assign(I18N.zh, {cst_title:"中俄连接器状态", cst_works:"可用", cst_exports:"通过导出文件可用",
+  cst_needs:"需要授权", cst_need:"所需条件", cst_from:"向谁申请", cst_exp:"可用导出文件", cst_ver:"验证", cst_conn:"连接器"});
+const _cstBadge = s => s === 'works' ? `<span class="badge b-ok">${T('cst_works')}</span>`
+  : s === 'via_exports' ? `<span class="badge b-multi">${T('cst_exports')}</span>` : `<span class="badge b-wait">${T('cst_needs')}</span>`;
+const _renderConnectorsBase = renderConnectors;
+renderConnectors = async function(){
+  await _renderConnectorsBase();
+  let list = [];
+  try { list = await api('/api/connectors'); } catch(e){ return; }
+  for(const c of list){
+    const el = document.getElementById('conn_res_' + c.id);
+    if(!el || !c.status) continue;
+    const box = document.createElement('div');
+    box.className = 'det';
+    box.innerHTML = `${_cstBadge(c.status)} ${esc(c.status_title || '')}`
+      + (c.verified && c.verified !== 'real' ? `<br>${T('cst_ver')}: ${esc(c.verified_title || '')}` : '')
+      + (c.exports ? `<br>${T('cst_exp')}: ${esc(c.exports)}` : '');
+    el.parentNode.insertBefore(box, el);
+  }
+  const card = document.getElementById('c-conn');
+  let st = document.getElementById('connStatus');
+  if(!st){ st = document.createElement('div'); st.id = 'connStatus'; st.style.marginBottom = '10px';
+           card.insertBefore(st, card.querySelector('h3')); }
+  st.innerHTML = `<h3>${T('cst_title')}</h3><div class="tbl-wrap"><table><tr><th>${T('cst_conn')}</th><th>${T('status')}</th>`
+    + `<th>${T('cst_need')}</th><th>${T('cst_from')}</th></tr>`
+    + list.map(c => `<tr><td>${esc(c.label)}</td><td>${_cstBadge(c.status)}</td><td>${esc(c.status === 'works' ? '—' : c.need || '')}</td>`
+      + `<td>${esc(c.status === 'works' ? '—' : c.need_from || '')}</td></tr>`).join('') + '</table></div>';
+};
+const _renderTabBase = renderTab;
+renderTab = function(){
+  _renderTabBase();
+  if(!lastRun || activeTab !== 'payments' || LANG !== 'zh') return;
+  const cur = lastRun.checks[activeTab];                    // в режиме 中文 — пояснение по-китайски
+  const cols = (cur.columns || []).map(c => c.key || c), i = cols.indexOf('detail'), j = cols.indexOf('detail_zh');
+  if(i < 0 || j < 0) return;
+  document.querySelectorAll('#resTbl tr').forEach(tr => { const td = tr.children; if(td.length > Math.max(i, j)) td[i].style.display = 'none'; });
+};
+// ============================== /Коннекторы/банк ==============================
+</script>
+<!-- SibDoc3: два режима — «Ретро данные» и «Реальное время», выбор типов документов, пакетная загрузка -->
+<script src="modes.js"></script>
 <!-- SibDoc3: закрытый контур — индикатор, курсы из файла, обновление с носителя -->
 <script src="offline.js"></script>
 </body>

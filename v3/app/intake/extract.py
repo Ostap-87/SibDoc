@@ -93,6 +93,7 @@ class DocContext:
     fmt: str
     data: bytes = b""                 # байты файла (для XML)
     warnings: list = field(default_factory=list)
+    split: dict = field(default_factory=dict)   # документ — часть файла ({"index", "of"}); пусто — весь файл
 
     @property
     def text(self) -> str:
@@ -548,6 +549,10 @@ def declaration(ctx: DocContext) -> dict | None:
 
 register_extractor("ru_dt", declaration, name="ДТ РФ: XML ФТС / скан", priority=50)
 register_extractor("cn_dec", declaration, name="报关单: XML / скан", priority=50)
+
+
+# SibDoc3: разборщики пакета ВЭД, выписок банка, реестра договоров и 1С EnterpriseData
+from app.intake import plugins as _plugins  # noqa: E402,F401
 
 
 def extract(ctx: DocContext) -> dict:

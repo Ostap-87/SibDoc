@@ -17,7 +17,8 @@
   GET    /api/intake/packages/{id}/documents/{doc}/original исходный файл
   GET    /api/intake/packages/{id}/documents/{doc}/pages/{n} картинка страницы
   GET    /api/intake/packages/{id}/excel                    «Пакет.xlsx»
-  POST   /api/intake/packages/{id}/to-retro                 «добавить в сверку»: ДТ, 报关单, SAP, черновики -> слоты ретро
+  POST   /api/intake/packages/{id}/to-retro                 «добавить в сверку»: ДТ, 报关单, SAP, черновики, пакет ВЭД,
+                                                            выписки банка, договоры -> слоты ретро
   POST   /api/realtime/{id}/check                           проверка отгрузки
   GET    /api/realtime/{id}/result                          последний результат (JSON)
   GET    /api/realtime/{id}/excel                           «Проверка отгрузки.xlsx»
@@ -47,7 +48,13 @@ journal.KINDS.setdefault("intake_type", ("Пакет: тип документа 
 journal.KINDS.setdefault("intake_to_retro", ("Пакет → сверка (ретро)", "文件包→核对"))
 journal.KINDS.setdefault("realtime_check", ("Проверка отгрузки", "发货核查"))
 
-RETRO_SLOTS = {"ru_dt": "ru_dt", "cn_dec": "cn_dec", "system_export": "purchase", "draft": "cd_drafts"}
+RETRO_SLOTS = {"ru_dt": "ru_dt", "cn_dec": "cn_dec", "system_export": "purchase", "draft": "cd_drafts",
+               # SibDoc3: пакет ВЭД и выписки банка / реестр договоров (ветки 2.1 и 2.2)
+               "invoice": "invoice", "packing": "packing", "transport": "transport", "conformity": "conformity",
+               "bank": "bank", "contract": "contract_register"}
+# Целый исходный файл (а не извлечённые строки) уходит в слот, если слот читает такой формат сам:
+# Excel / CSV / XML — все; выписки банка — ещё TXT (1С «Клиент-банк», MT940).
+WHOLE_FORMATS = {"default": ("xml", "excel", "csv"), "bank": ("xml", "excel", "csv", "txt")}
 
 
 def _srv():
@@ -240,12 +247,28 @@ def packages_excel(pid: str):
 
 # ------------------------------------------------------------------ «добавить в сверку» (ретро)
 class RetroBody(BaseModel):
-    doc_ids: Optional[list[str]] = None      # пусто — все ДТ, 报关单, выгрузки SAP и черновики пакета
+    doc_ids: Optional[list[str]] = None      # пусто — все документы пакета, у которых есть слот ретро-режима
+
+
+def _own_fields(d: dict, slot: str, cfg: dict) -> tuple[dict, list]:
+    """Поля документа для слота. Документ пакета ВЭД, прочитанный разборщиком слота (package_docs),
+    переносится только с полями этого разборщика — так же, как файл, загруженный прямо в слот;
+    поля общего разбора (подписи на другом языке и т. п.) остаются в «Пакет.xlsx»."""
+    fields, items = d.get("fields") or {}, d.get("items") or []
+    if ((cfg.get("sources") or {}).get(slot) or {}).get("package") and str(d.get("extractor", "")).startswith("ВЭД-пакет"):
+        own = lambda fv: str(fv.get("how", "")).startswith("ВЭД-пакет")  # noqa: E731
+        f2 = {f: fv for f, fv in fields.items() if own(fv)}
+        i2 = [dict(it, fields={f: fv for f, fv in it["fields"].items() if own(fv)}) for it in items]
+        i2 = [it for it in i2 if it["fields"]]
+        if f2 or i2:
+            return f2, i2
+    return fields, items
 
 
 def _doc_rows(d: dict, slot: str, cfg: dict, pid: str) -> list[dict]:
-    head = {f: fv.get("value") for f, fv in (d.get("fields") or {}).items()}
-    rows = [dict(head, **{f: fv.get("value") for f, fv in it["fields"].items()}) for it in d.get("items") or []] \
+    fields, items = _own_fields(d, slot, cfg)
+    head = {f: fv.get("value") for f, fv in fields.items()}
+    rows = [dict(head, **{f: fv.get("value") for f, fv in it["fields"].items()}) for it in items] \
         or ([head] if head else [])
     fmap = ((cfg.get("sources") or {}).get(slot) or {}).get("fields") or {}
     out = []
@@ -256,8 +279,26 @@ def _doc_rows(d: dict, slot: str, cfg: dict, pid: str) -> list[dict]:
     return out
 
 
+def _enterprise_slots(pid: str, d: dict, cfg: dict) -> list[str]:
+    """Файл обмена 1С EnterpriseData (весь файл, не часть) -> слоты, для которых в нём есть данные."""
+    if d.get("format") != "xml" or d.get("split") or not d.get("stored"):
+        return []
+    try:
+        from app.services import enterprise_data
+        path, _ = pkg.original_path(pid, d["id"])
+        with open(path, "rb") as fh:
+            data = fh.read()
+        if not enterprise_data.is_enterprise_data(data):
+            return []
+        parts, _ = enterprise_data.parse(data, path)
+    except Exception:  # noqa: BLE001 — не EnterpriseData: обычный путь
+        return []
+    return [s for s in parts if s in (cfg.get("sources") or {})]
+
+
 def to_retro(pid: str, doc_ids: list | None, user: str) -> dict:
-    """Документы пакета -> слоты ретро-режима (как «Сканы → источник»): ДТ, 报关单, SAP, черновики."""
+    """Документы пакета -> слоты ретро-режима (как «Сканы → источник»): ДТ, 报关单, SAP, черновики,
+    инвойсы, упаковочные листы, транспортные документы, сертификаты, выписки банка, реестр договоров."""
     srv = _srv()
     cfg = srv._cfg()
     docs = pkg.documents(pid)
@@ -266,6 +307,17 @@ def to_retro(pid: str, doc_ids: list | None, user: str) -> dict:
     skipped = []
     for d in chosen:
         slot = RETRO_SLOTS.get(d["type"])
+        ed_slots = _enterprise_slots(pid, d, cfg)
+        if ed_slots:                          # 1С EnterpriseData: один файл — в несколько слотов
+            if d.get("status") in ("не распознан", "ошибка"):
+                skipped.append({"doc_id": d["id"], "reason": d.get("status")})
+                continue
+            path, name = pkg.original_path(pid, d["id"])
+            with open(path, "rb") as fh:
+                data = fh.read()
+            for s_ in ed_slots:
+                by_slot.setdefault(s_, []).append(("file", data, f"пакет_{d['id']}_{name}", d["id"]))
+            continue
         if slot is None or slot not in (cfg.get("sources") or {}):
             if doc_ids is not None:
                 skipped.append({"doc_id": d["id"], "reason": f"тип «{cls_mod.type_label(d['type'])}» в сверку не "
@@ -274,7 +326,8 @@ def to_retro(pid: str, doc_ids: list | None, user: str) -> dict:
         if d.get("status") in ("не распознан", "ошибка"):
             skipped.append({"doc_id": d["id"], "reason": d.get("status")})
             continue
-        whole = not d.get("split") and d.get("format") in ("xml", "excel", "csv") and d.get("stored")
+        whole = not d.get("split") and d.get("format") in WHOLE_FORMATS.get(slot, WHOLE_FORMATS["default"]) \
+            and d.get("stored")
         if whole:
             try:
                 path, name = pkg.original_path(pid, d["id"])

@@ -61,6 +61,10 @@ def _use_tesseract() -> None:
     cmd = tesseract_cmd()
     if cmd:
         pytesseract.pytesseract.tesseract_cmd = cmd
+    # SibDoc3: Tesseract с OpenMP при нескольких распознаваниях сразу (сервер, пакетная загрузка,
+    # сканы в слотах) «крутит» потоки впустую и замедляется в десятки раз — один поток на страницу
+    # (как в app/intake/formats.py); свою настройку можно задать переменной окружения заранее.
+    os.environ.setdefault("OMP_THREAD_LIMIT", "1")
 
 
 def _tessdata_dir() -> str | None:
@@ -88,6 +92,7 @@ def available_languages() -> list[str]:
 
 
 def _ocr_image(img: Image.Image) -> str:
+    _use_tesseract()                                   # путь к tesseract и OMP_THREAD_LIMIT=1
     gray = ImageOps.grayscale(img)
     gray = ImageOps.autocontrast(gray, cutoff=1)
     cfg = ""

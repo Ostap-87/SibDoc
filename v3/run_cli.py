@@ -6,7 +6,8 @@
     python3 run_cli.py --wide data/demo/wide_table_demo.xlsx --purchase data/demo/purchase_demo.xlsx \\
         --ru-dt "data/demo/ru_dt/*.xml" --cn-dec data/demo/cn_dec_demo.xlsx --sap-vs-cd data/demo/sap_vs_cd_demo.csv \\
         --invoice "data/demo/package/invoice/*" --packing "data/demo/package/packing/*" \\
-        --transport "data/demo/package/transport/*" --conformity "data/demo/package/conformity/*"
+        --transport "data/demo/package/transport/*" --conformity "data/demo/package/conformity/*" \\
+        --bank "data/demo/bank/*"
 
 Отчёты: storage/runs/<номер прогона>/ и последний — storage/reports/post_control_report.xlsx / .pdf.
 Код возврата: 1, если есть ISSUE или ошибки качества данных.
@@ -52,6 +53,11 @@ def main():
     ap.add_argument("--packing", nargs="*", help="упаковочные листы")
     ap.add_argument("--transport", nargs="*", help="транспортные документы: CMR, B/L, СМГС, AWB")
     ap.add_argument("--conformity", nargs="*", help="сертификаты соответствия ЕАЭС и происхождения")
+    # Коннекторы/банк
+    ap.add_argument("--bank", dest="bank", nargs="*",
+                    help="выписки банка: 1CClientBankExchange (.txt), camt.053 (.xml), MT940, CSV/Excel банков КНР")
+    ap.add_argument("--contracts", dest="contract_register", nargs="*",
+                    help="реестр договоров: 1С EnterpriseData (.xml) или Excel")
     ap.add_argument("--user", default=os.environ.get("USER", "cli"), help="кто запускает (для журнала и отчёта)")
     args = ap.parse_args()
 
@@ -68,7 +74,8 @@ def main():
             ("cde_reference", [args.cde_reference] if args.cde_reference else []),
             ("ru_dt", _expand(args.ru_dt)), ("cn_dec", _expand(args.cn_dec)),
             ("invoice", _expand(args.invoice)), ("packing", _expand(args.packing)),          # ВЭД-пакет
-            ("transport", _expand(args.transport)), ("conformity", _expand(args.conformity))]
+            ("transport", _expand(args.transport)), ("conformity", _expand(args.conformity)),
+            ("bank", _expand(args.bank)), ("contract_register", _expand(args.contract_register))]   # Коннекторы/банк
     for slot, paths in plan:
         if not paths:
             continue

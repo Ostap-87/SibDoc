@@ -350,7 +350,9 @@ def set_type(pid: str, doc_id: str, new_type: str, user: str = "-") -> dict:
             doc["type"], doc["type_source"], doc["confidence"] = new_type, "manual", 1.0
         doc.setdefault("history", []).append({"at": _now(), "user": user, "type": doc["type"],
                                               "source": doc["type_source"]})
-        data = _part_bytes(pid, doc) if doc.get("format") == "xml" else b""
+        # байты файла: XML — для профилей деклараций; весь файл (не часть) — для разборщиков слотов
+        # (пакет ВЭД, выписки банка, реестр договоров: app/intake/plugins.py)
+        data = _part_bytes(pid, doc) if doc.get("format") == "xml" or not doc.get("split") else b""
         pipeline.run_extraction(doc, data)
         save_doc(pid, doc)
         meta = load_meta(pid)

@@ -108,7 +108,7 @@ def run_extraction(doc: dict, data: bytes = b"") -> dict:
         res = {"fields": {}, "items": [], "kv": [], "warnings": [], "extractor": "нет"}
     else:
         ctx = ex.DocContext(doc_id=doc["id"], type=doc["type"], units=units, file=doc["file"],
-                            fmt=doc["format"], data=data)
+                            fmt=doc["format"], data=data, split=dict(doc.get("split") or {}))
         res = ex.extract(ctx)
     doc.update(fields=res["fields"], items=res["items"], kv=res.get("kv") or [], warnings=res.get("warnings") or [],
                extractor=res.get("extractor", ""))

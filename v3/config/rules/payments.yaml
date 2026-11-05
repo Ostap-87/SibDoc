@@ -1,0 +1,38 @@
+# Оплаты: выписки банка ↔ контракты (Коннекторы/банк)
+# Платёж привязывается к контракту по номеру в назначении платежа (кириллица и латиница
+# сравниваются одинаково: ДЕМО = DEMO), по номеру инвойса или по УНК; затем сверяются
+# плательщик/получатель со сторонами контракта, валюта и сумма.
+
+directions: [in, out]               # какие операции сверять: in — поступления, out — списания
+only_booked: true                   # только проведённые (camt: BOOK); PDNG/INFO пропускаются
+min_contract_len: 4                 # короче — номер контракта не ищется в тексте (чтобы «1» не совпадало везде)
+
+# ожидаемая сумма по контракту: первый источник, где она есть
+expected_amount_from: [invoice, contract_register, ru_dt, cn_dec, purchase]
+
+amount_tolerance_pct: 0.5           # допуск суммы, %
+amount_tolerance_abs: 50            # и/или абсолютный допуск в валюте контракта (комиссии банков-корреспондентов)
+fx_side: ru                         # курс для пересчёта валют: ru — ЦБ РФ, cn — центральный курс НБК (CFETS)
+
+# контрагент: похожесть названий 0…1 (после очистки: ООО, LLC, CO., LTD., 有限公司 …; кириллица — транслитом)
+counterparty_min_ratio: 0.8         # не ниже — совпадает
+counterparty_review_ratio: 0.6      # между review и min — «похоже, проверить»
+counterparty_mismatch: review       # плательщик не сторона контракта (оплата третьим лицом): review | issue
+counterparty_aliases: {}            # одно лицо под разными названиями, например:
+  # "示例进口有限公司": ["DEMO IMPORT CO LTD", "SHILI JINKOU"]
+own_names: []                       # наши названия (не считать их «контрагентом контракта»)
+legal_forms: [ООО, ОАО, ЗАО, ПАО, АО, ИП, ТОО, OOO, OAO, ZAO, PAO, AO, LLC, LTD, LIMITED, CO, COMPANY, CORP,
+              CORPORATION, INC, GMBH, JSC, PLC, 有限公司, 有限责任公司, 股份有限公司, 公司, 集团有限公司]
+
+# платёж без контракта: по направлению
+payment_without_contract: {in: issue, out: review}
+assign_by_counterparty: false       # true — если контрагент связан ровно с одним контрактом, относить платёж к нему
+contract_without_payment: review    # контракт есть, оплат нет: review | issue | ok
+
+# инвойсы в назначении платежа («инвойс № …», «invoice …», «发票号 …», «INV-…»); номер — с цифрой
+invoice_regex: '(?i)(?<![a-zа-яё])(?:инвойс|invoice|inv\.?|счет[ау]?|счёт[ау]?|сч\.|发票号?|发票编号|PI|CI)\s*(?:№|no\.?|nr\.?|n|#|:)?\s*([A-ZА-Я0-9][A-ZА-Я0-9\-/.]{2,})'
+invoice_slot: invoice               # слот инвойсов (если загружен) и его колонки
+invoice_number_columns: [invoice_no, invoice_num, invoice_number, "Номер инвойса", "发票号"]
+invoice_contract_columns: [contract]
+invoice_amount_columns: [invoice_amount, total_value, amount]
+invoice_currency_columns: [currency]

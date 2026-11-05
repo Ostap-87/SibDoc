@@ -78,6 +78,28 @@ def _get_any(data, path: str):
     return get_path(data, path)
 
 
+class Utf8BasicAuth:
+    """Basic-авторизация, где логин и пароль могут быть по-русски (1С): кодируются в UTF-8
+    (requests кодирует latin-1 и падает на кириллице). Сравнивается с кортежем (логин, пароль)."""
+
+    def __init__(self, username: str, password: str):
+        self.username, self.password = username, password
+
+    def __call__(self, r):
+        import base64
+        raw = f"{self.username}:{self.password}".encode("utf-8")
+        r.headers["Authorization"] = "Basic " + base64.b64encode(raw).decode("ascii")
+        return r
+
+    def __eq__(self, other):
+        if isinstance(other, tuple):
+            return (self.username, self.password) == other
+        return (self.username, self.password) == (getattr(other, "username", None), getattr(other, "password", None))
+
+    def __repr__(self):
+        return f"Utf8BasicAuth({self.username!r}, ***)"
+
+
 class RestConnector(Connector):
     type = "rest"
     title = "REST/JSON API (универсальный)"
@@ -139,7 +161,7 @@ class RestConnector(Connector):
             s.headers[str(k)] = str(v)
         mode = self._auth_mode()
         if mode == "basic":
-            s.auth = (str(self.opt("username", "")), self.secret("password"))
+            s.auth = Utf8BasicAuth(str(self.opt("username", "")), self.secret("password"))
         elif mode == "bearer":
             s.headers["Authorization"] = f"Bearer {self.secret('token')}"
         elif mode == "api_key_header":

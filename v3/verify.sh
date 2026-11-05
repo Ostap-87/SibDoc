@@ -27,7 +27,8 @@ $RUN --wide data/demo/wide_table_demo.xlsx --purchase data/demo/purchase_demo.xl
      --ru-dt "data/demo/ru_dt/*.xml" --cn-dec data/demo/cn_dec_demo.xlsx \
      --sap-vs-cd data/demo/sap_vs_cd_demo.csv \
      --invoice "data/demo/package/invoice/*" --packing "data/demo/package/packing/*" \
-     --transport "data/demo/package/transport/*" --conformity "data/demo/package/conformity/*" > "$LOG2"
+     --transport "data/demo/package/transport/*" --conformity "data/demo/package/conformity/*" \
+     --bank "data/demo/bank/*" > "$LOG2"
 grep -E "total=|курс:" "$LOG2"
 
 echo "---------------------------------------------------"
@@ -46,6 +47,8 @@ check "$LOG2" "0\. Completeness +total=5 +OK=4 +ISSUE=1"       "демо: пол
 check "$LOG2" "1\. Price +total=7 +OK=5 +ISSUE=1 +REVIEW=1"    "демо: цена — 1 расхождение, 1 совпадение через курс (или «нет курса»)"
 check "$LOG2" "6\. .* +total=11 +OK=6 +ISSUE=4 +REVIEW=1"      "демо: ДТ ↔ 报关单 ↔ SAP — 4 расхождения (цена, вес, код, ДТ нет в SAP)"
 check "$LOG2" "7\. .* +total=37 +OK=28 +ISSUE=7 +REVIEW=2"     "демо: пакет ВЭД — 7 расхождений (брутто, нет уп. листа, сумма ×3, истёк сертификат, страна)"
+# Коннекторы/банк: выписки 1С «Клиент-банк», camt.053, MT940 ↔ контракты демо-набора
+check "$LOG2" "8\. .* +total=14 +OK=5 +ISSUE=2 +REVIEW=7"      "демо: оплаты — платёж без контракта; переплата ДЕМО.1002-02А против инвойса (оплачено по завышенной ДТ)"
 
 rm -f "$LOG" "$LOG2"
 echo "---------------------------------------------------"

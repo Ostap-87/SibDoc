@@ -15,8 +15,8 @@ if %errorlevel%==0 (
     if exist .venv\Scripts\activate.bat call .venv\Scripts\activate.bat
     python run_cli.py --wide data/wide_table.xlsx --purchase data/purchase.xlsx
     echo ---------------------------------------------------
-    echo  DEMO: DT RF / CN dec / SAP - ozhidaetsya "6. ... ISSUE=4"; paket VED - "7. ... total=37 OK=28 ISSUE=7 REVIEW=2"
-    python run_cli.py --wide data/demo/wide_table_demo.xlsx --purchase data/demo/purchase_demo.xlsx --ru-dt data/demo/ru_dt/*.xml --cn-dec data/demo/cn_dec_demo.xlsx --sap-vs-cd data/demo/sap_vs_cd_demo.csv --invoice data/demo/package/invoice/* --packing data/demo/package/packing/* --transport data/demo/package/transport/* --conformity data/demo/package/conformity/*
+    echo  DEMO: DT RF / CN dec / SAP - ozhidaetsya "6. ... ISSUE=4"; paket VED - "7. ... total=37 OK=28 ISSUE=7 REVIEW=2"; oplaty - "8. ... total=14 OK=5 ISSUE=2 REVIEW=7"
+    python run_cli.py --wide data/demo/wide_table_demo.xlsx --purchase data/demo/purchase_demo.xlsx --ru-dt data/demo/ru_dt/*.xml --cn-dec data/demo/cn_dec_demo.xlsx --sap-vs-cd data/demo/sap_vs_cd_demo.csv --invoice data/demo/package/invoice/* --packing data/demo/package/packing/* --transport data/demo/package/transport/* --conformity data/demo/package/conformity/* --bank data/demo/bank/*
 )
 
 echo ---------------------------------------------------

@@ -52,7 +52,8 @@ class FolderConnector(Connector):
             with open(src, "rb") as fh:
                 data = fh.read()
             out.extend(self._store_file(dest_dir, os.path.basename(src), data,
-                                        masks=fileutil.DEFAULT_MASKS, origin=src, used=used))
+                                        masks=self.opt_list("zip_masks") or fileutil.DEFAULT_MASKS,
+                                        origin=src, used=used))
         return out
 
     def _files(self) -> list[str]:

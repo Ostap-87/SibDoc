@@ -37,7 +37,8 @@ connector_error), вычищают секреты из текстов ошибо
 файлы по слотам именно по началу имени.
 Известные слоты: wide_table, purchase, sap_vs_cd, cd_drafts, hs_reference,
 cde_reference, ru_dt (российская ДТ: XML ФТС или Excel), cn_dec (китайская
-декларация 报关单: Excel/CSV/XML брокера).
+декларация 报关单: Excel/CSV/XML брокера), bank (выписки банков), contract_register
+(договоры: 1С EnterpriseData / Excel).
 """
 from __future__ import annotations
 
@@ -57,11 +58,35 @@ PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..
 STATE_DIR = os.path.join(PROJECT_ROOT, "storage", "connectors")
 
 KNOWN_SLOTS = ("wide_table", "purchase", "sap_vs_cd", "cd_drafts", "hs_reference",
-               "cde_reference", "ru_dt", "cn_dec")
+               "cde_reference", "ru_dt", "cn_dec",
+               "bank", "contract_register")          # Коннекторы/банк: выписки банков, реестр договоров
 
 STAGE_READY = "ready"
 STAGE_NEEDS_ACCESS = "needs_access"
 STAGE_TITLES = {STAGE_READY: "рабочий", STAGE_NEEDS_ACCESS: "задел: ждёт доступа"}
+
+# ---------------------------------------------------------------- Коннекторы/банк: статус коннектора
+# Что видит страница коннекторов: «работает» / «работает через выгрузки» / «нужен доступ: что и у кого».
+STATUS_WORKS, STATUS_EXPORTS, STATUS_NEEDS = "works", "via_exports", "needs_access"
+STATUS_TITLES = {STATUS_WORKS: "работает", STATUS_EXPORTS: "работает через выгрузки",
+                 STATUS_NEEDS: "нужен доступ"}
+VERIFIED_TITLES = {
+    "real": "проверено на реальном протоколе",
+    "emulator": "проверено на эмуляторе, на реальной системе — после выдачи доступа",
+    "none": "прямого обмена нет — только выгрузки в папку",
+}
+# что нужно первой очереди (у второй — атрибуты need / need_from в классе)
+ACCESS_NEEDS = {
+    "imap": ("адрес IMAP-сервера, почтовый ящик и пароль приложения (в переменной окружения)",
+             "у администратора почты"),
+    "folder": ("папка на сервере SibDoc (можно сетевая) с правом чтения", "у администратора сервера"),
+    "sftp": ("адрес SFTP, учётная запись с ключом и отпечаток ключа сервера",
+             "у брокера или администратора SFTP"),
+    "rest": ("адрес API, способ входа и токен/пароль", "у владельца API (брокер, ИТ)"),
+    "database": ("строка подключения SQLAlchemy с пользователем на чтение", "у администратора БД (FineBI)"),
+    "sap_odata": ("адрес OData-сервиса и пользователь (или OAuth-клиент) с правом чтения",
+                  "у администратора SAP (Basis)"),
+}
 
 DEFAULT_SLOT_RULES = [
     {"pattern": r"(?i)(报关单|customs.?dec|cn_dec)", "slot": "cn_dec"},
@@ -110,6 +135,12 @@ class Connector:
     params: list[dict] = []
     # для stage = needs_access: что получить и у кого
     access_hint = ""
+    # Коннекторы/банк: для страницы статуса
+    implemented = True         # прямой обмен реализован в коде
+    verified = "real"          # real | emulator | none — где проверен обмен
+    need = ""                  # что нужно для прямого доступа (коротко)
+    need_from = ""             # у кого
+    exports_hint = ""          # какие выгрузки принимает папка export_dir (если есть мост)
 
     def __init__(self, cid: str, cfg: dict):
         self.id = cid
@@ -219,18 +250,76 @@ class Connector:
         return out
 
     def public_dict(self) -> dict:
-        return {"id": self.id, "type": self.type, "title": self.title,
-                "label": self.label, "enabled": self.enabled, "stage": self.stage,
-                "stage_title": STAGE_TITLES.get(self.stage, self.stage),
-                "params": self.describe_params(), "missing": self.missing(),
-                "warnings": self.warnings()}
+        d = {"id": self.id, "type": self.type, "title": self.title,
+             "label": self.label, "enabled": self.enabled, "stage": self.stage,
+             "stage_title": STAGE_TITLES.get(self.stage, self.stage),
+             "params": self.describe_params(), "missing": self.missing(),
+             "warnings": self.warnings()}
+        d.update(self.status())                                      # Коннекторы/банк
+        return d
 
     @classmethod
     def catalog_entry(cls) -> dict:
-        return {"type": cls.type, "title": cls.title, "stage": cls.stage,
-                "stage_title": STAGE_TITLES.get(cls.stage, cls.stage),
-                "access_hint": cls.access_hint,
-                "params": [dict(p) for p in cls.params]}
+        d = {"type": cls.type, "title": cls.title, "stage": cls.stage,
+             "stage_title": STAGE_TITLES.get(cls.stage, cls.stage),
+             "access_hint": cls.access_hint,
+             "params": [dict(p) for p in cls.params]}
+        d.update(cls.capability())                                   # Коннекторы/банк
+        return d
+
+    # ---------------------------------------------------------------- Коннекторы/банк: статус
+    @classmethod
+    def _need(cls) -> tuple[str, str]:
+        if cls.need or cls.need_from:
+            return cls.need, cls.need_from
+        return ACCESS_NEEDS.get(cls.type, (cls.access_hint, ""))
+
+    @classmethod
+    def has_export_bridge(cls) -> bool:
+        return any(p.get("key") == "export_dir" for p in cls.params)
+
+    @classmethod
+    def capability(cls) -> dict:
+        """Что умеет тип коннектора (без настроек экземпляра)."""
+        need, who = cls._need()
+        if cls.implemented:
+            code = STATUS_WORKS
+            title = STATUS_TITLES[code] + ("" if cls.verified == "real" else f" ({VERIFIED_TITLES[cls.verified]})")
+        elif cls.has_export_bridge():
+            code, title = STATUS_EXPORTS, STATUS_TITLES[STATUS_EXPORTS]
+        else:
+            code, title = STATUS_NEEDS, STATUS_TITLES[STATUS_NEEDS]
+        return {"capability": code, "capability_title": title, "verified": cls.verified,
+                "verified_title": VERIFIED_TITLES.get(cls.verified, cls.verified), "implemented": cls.implemented,
+                "need": need, "need_from": who, "exports": cls.exports_hint,
+                "export_bridge": cls.has_export_bridge()}
+
+    def _export_mode(self) -> bool:
+        return bool(self.opt("export_dir")) if self.has_export_bridge() else False
+
+    def _direct_missing(self) -> list[str]:
+        """Не заполнено для прямого доступа (без учёта папки выгрузок)."""
+        return self.missing()
+
+    def status(self) -> dict:
+        """Статус экземпляра: works | via_exports | needs_access (+ что нужно и у кого)."""
+        cap = self.capability()
+        miss = self._direct_missing()
+        need, who = cap["need"], cap["need_from"]
+        if self.implemented and not miss:
+            code = STATUS_WORKS
+            title = STATUS_TITLES[code] + ("" if self.verified == "real" else
+                                           f" ({VERIFIED_TITLES.get(self.verified, self.verified)})")
+        elif self._export_mode():
+            code = STATUS_EXPORTS
+            title = STATUS_TITLES[code] + (f"; прямой доступ: нужно {need} — {who}" if need else "")
+        else:
+            code = STATUS_NEEDS
+            title = f"нужен доступ: {need}" + (f" — {who}" if who else "")
+        out = {"status": code, "status_title": title}
+        out.update({k: cap[k] for k in ("capability", "capability_title", "verified", "verified_title",
+                                        "implemented", "need", "need_from", "exports", "export_bridge")})
+        return out
 
     # ================================================================ api
     def _gate(self) -> str | None:
@@ -462,7 +551,7 @@ class Connector:
     # ================================================================ закрытый контур
     # SibDoc3: закрытый контур — параметры, в которых записан адрес сервера
     NET_KEYS = ("host", "url", "base_url", "server_url", "service_url", "api_url", "token_url",
-                "auth_url", "gateway_url", "issuer_url", "endpoint", "wsdl_url")
+                "auth_url", "gateway_url", "issuer_url", "endpoint", "wsdl_url", "discovery_url")
 
     def _offline_targets(self) -> list[str]:
         """Адреса серверов из параметров коннектора (секретная строка БД — тоже)."""

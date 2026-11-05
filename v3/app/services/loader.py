@@ -23,9 +23,11 @@ import pandas as pd
 from app import fields as fdict
 from app.models import Source
 from app.services import xml_decl
+from app.services import bank_statements, enterprise_data   # Коннекторы/банк
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-TABLE_EXTS = (".xlsx", ".xlsm", ".xls", ".csv", ".txt")
+BANK_EXTS = (".sta", ".940", ".mt940")          # Коннекторы/банк: выписки MT940
+TABLE_EXTS = (".xlsx", ".xlsm", ".xls", ".csv", ".txt") + BANK_EXTS
 ACCEPTED_EXTS = TABLE_EXTS + (".xml", ".zip")
 # ВЭД-пакет: в слоты документов отгрузки (sources.<слот>.package) принимаются ещё PDF и сканы
 PACKAGE_EXTRA_EXTS = (".pdf", ".jpg", ".jpeg", ".png", ".tif", ".tiff", ".bmp")
@@ -138,7 +140,11 @@ def read_table(data: bytes, filename: str, slot: str | None = None,
         info.update({"rows": int(len(df)), "columns": int(len(df.columns))})
         return df, info
     # --- конец блока ВЭД-пакет
-    if low.endswith(".zip"):
+    special = _special_formats(data, filename, slot, slot_cfg)        # Коннекторы/банк
+    if special is not None:
+        df, info2 = special
+        info.update(info2)
+    elif low.endswith(".zip"):
         df, info2 = _read_zip(data, slot, cfg)
         info.update(info2)
     elif xml_decl.is_xml(data, filename) and not low.endswith(TABLE_EXTS):
@@ -164,8 +170,54 @@ def read_table(data: bytes, filename: str, slot: str | None = None,
         df, mapped = fdict.canonicalize(df)
     else:
         mapped = []
+    if slot_cfg.get("parser") == "bank_statement":                     # Коннекторы/банк
+        df = bank_statements.normalize_table(df, slot_cfg.get("own_accounts"))
     info.update({"rows": int(len(df)), "columns": int(len(df.columns)), "mapped": mapped})
     return df, info
+
+
+# ------------------------------------------------------------------ Коннекторы/банк
+def _special_formats(data: bytes, filename: str, slot, slot_cfg: dict):
+    """Выписки банков (1CClientBankExchange, camt.05x, MT940, CSV интернет-банка) и
+    1С EnterpriseData. -> (таблица, сведения) или None, если файл обычный."""
+    low = filename.lower()
+    try:
+        kind = bank_statements.detect(data, filename)
+    except Exception:  # noqa: BLE001 — определение формата не должно ронять загрузку
+        kind = None
+    if kind:
+        try:
+            df, meta = bank_statements.parse(data, filename)
+        except bank_statements.BankFormatError as exc:
+            raise LoadError(f"{filename}: {exc}")
+        info = {"format": meta.get("format", kind), "profile": meta.get("format", kind),
+                "accounts": meta.get("accounts") or []}
+        if slot and slot_cfg.get("parser") != "bank_statement":
+            info["warning"] = f"файл похож на выписку банка ({meta.get('format')}), а загружен в слот «{slot}»"
+        return df, info
+    if (low.endswith(".xml") or xml_decl.is_xml(data, filename)) and not low.endswith(TABLE_EXTS) \
+            and enterprise_data.is_enterprise_data(data):
+        try:
+            parts, meta = enterprise_data.parse(data, filename)
+        except (enterprise_data.EnterpriseDataError, xml_decl.XmlDeclError) as exc:
+            raise LoadError(f"{filename}: {exc}")
+        if slot in parts:
+            df = parts[slot]
+        elif not slot and len(parts) == 1:
+            df = next(iter(parts.values()))
+        else:
+            raise LoadError(f"в файле 1С EnterpriseData нет данных для слота «{slot}» "
+                            f"(есть: {', '.join(parts) or 'нет нужных объектов'})")
+        info = {"format": "1С EnterpriseData", "profile": f"1С EnterpriseData {meta.get('version', '')}".strip(),
+                "objects": meta.get("objects") or {}}
+        others = [s for s in parts if s != slot]
+        if others:
+            info["note"] = f"в этом же файле есть данные для слотов: {', '.join(others)}"
+        return df, info
+    if slot_cfg.get("parser") == "bank_statement" and low.endswith((".csv", ".txt")):
+        df = bank_statements.read_csv_text(data)
+        return df, {"format": "csv (выписка банка)"}
+    return None
 
 
 def _read_zip(data: bytes, slot, cfg) -> tuple[pd.DataFrame, dict]:

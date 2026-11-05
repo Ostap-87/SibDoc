@@ -166,7 +166,7 @@ checks:
 | GET / POST / DELETE | `/api/rates/manual[/{id}]` | ручные курсы |
 | GET / PUT | `/api/rates/settings` | режим `official` / `manual_override` и др. |
 | GET | `/api/rates/convert?amount&from_ccy&to_ccy&date&side` | пересчёт |
-| GET | `/api/connectors`, `/api/connectors/catalog` | настроенные коннекторы; все типы |
+| GET | `/api/connectors`, `/api/connectors/catalog` | настроенные коннекторы (со статусом `status` / `need` / `need_from` / `verified`); все типы (`capability`) |
 | POST | `/api/connectors/{id}/test`, `/pull` | проверить доступ; забрать данные в слоты |
 | POST | `/api/reload` | опросить включённые коннекторы и перечитать сохранённые файлы |
 | GET / POST | `/api/notifications`, `/{id}/test` | каналы уведомлений, тестовое сообщение |
@@ -248,6 +248,16 @@ checks:
   `_test` / `_pull`), `stage` = `ready` | `needs_access`, `params` для интерфейса, секреты через
   `secret()` (`*_env`, `${VAR}`), `slot_rules`; `catalog()` — все типы. **`app/notify/`** —
   `send(cfg, event, text, files, user)`, `test_channel`. Подробно — `docs/CONNECTORS.md`.
+- **Статус коннектора** — `Connector.status()` / `capability()`: `works` | `via_exports` |
+  `needs_access`; атрибуты класса `implemented`, `verified` (`real` | `emulator` | `none`), `need`,
+  `need_from`, `exports_hint` (для первой очереди — `ACCESS_NEEDS` в `base.py`). Мост «папка
+  выгрузок» — примесь `ExportBridge` (`stub.py`): `export_defaults` (маски, правила слотов),
+  `content_slots` (слот по содержимому — `sniff.slots_of`). Эмуляторы систем для тестов —
+  `tests/emulators.py` (`MockServer` + `KingdeeEmulator`, `YonyouEmulator`, `OneCODataEmulator`).
+- **Выписки банков** — `app/services/bank_statements.py`: `detect` / `parse` (1CClientBankExchange,
+  camt.05x, MT940), `normalize_table` (CSV/Excel банков, слот с `parser: bank_statement`);
+  **1С EnterpriseData** — `app/services/enterprise_data.py` + `config/enterprise_data.yaml`
+  (один файл -> несколько слотов). Загрузчик вызывает их в `loader._special_formats`.
 
 ## 9. Отчёты
 
@@ -263,14 +273,17 @@ checks:
 
 ```bash
 pip install -r requirements-dev.txt
-pytest                      # 206 тестов: проверки (все случаи аудита), загрузка, XML, отчёты, API, курсы, коннекторы, пакет ВЭД
+pytest                      # тесты: проверки (все случаи аудита), загрузка, XML, отчёты, API, курсы, коннекторы, пакет ВЭД,
+                            # выписки банков, «Оплаты», эмуляторы Kingdee / Yonyou / 1С (tests/test_bank_connectors.py),
+                            # пакетная загрузка, реальное время, закрытый контур, интерфейс
 ./verify.sh                 # эталон data/ + демо-набор data/demo/
 ```
 
 Эталон на `data/` (2.0): цена 46 строк — 41 OK / 5 ISSUE; HS 51 — 33 OK / 18 REVIEW;
 условия 51 — 43 OK / 8 REVIEW; элементы 21 — 17 OK / 4 REVIEW; контракты 46 — 43 OK /
 0 ISSUE / 3 REVIEW; DQ — 1 ERROR; «Пакет документов» на `data/` — SKIPPED (документов пакета нет).
-Демо-набор: «Пакет документов» — 37 строк, 28 OK / 7 ISSUE / 2 REVIEW. Изменили логику — сверьте с эталоном и объясните
+Демо-набор: «Пакет документов» — 37 строк, 28 OK / 7 ISSUE / 2 REVIEW; «8. Оплаты» (`data/demo/bank/` вместе с инвойсами
+пакета) — 14 строк: 5 OK / 2 ISSUE / 7 REVIEW. Изменили логику — сверьте с эталоном и объясните
 каждую разницу (пример — `docs/CHANGELOG.md`). Демо-набор пересоздаётся
 `python3 tools/make_demo.py` (только вымышленные данные).
 
@@ -291,13 +304,19 @@ SibDoc/
 │   ├── rates/               курсы валют
 │   ├── connectors/          коннекторы (первая очередь + задел)
 │   ├── notify/              уведомления WeCom / Telegram / почта
-│   └── services/            loader / xml_decl / package_docs / data_quality / engine / runs / labels / report_* / OCR
-├── config/                  system.yaml, rules/, fields.yaml, xml_profiles.yaml, rates.yaml, scan_*.yaml
+│   ├── intake/              SibDoc 3: пакетная загрузка (форматы, классификация, поля; plugins.py — разборщики
+│   │                        пакета ВЭД, выписок банка, договоров, 1С EnterpriseData)
+│   ├── realtime/            SibDoc 3: проверка отгрузки в реальном времени
+│   ├── api_intake.py        SibDoc 3: /api/intake/*, /api/realtime/*, «В сверку» (RETRO_SLOTS)
+│   ├── netguard.py          SibDoc 3: закрытый контур — проверка каждого сетевого обращения
+│   └── services/            loader / xml_decl / package_docs / bank_statements / enterprise_data / data_quality /
+│                            engine / runs / labels / report_* / OCR
+├── config/                  system.yaml, rules/, fields.yaml, xml_profiles.yaml, enterprise_data.yaml, rates.yaml, scan_*.yaml
 ├── references/              встроенные справочники
-├── data/                    эталонные данные + demo/ (вымышленные; demo/package — пакет ВЭД)
-├── tools/make_demo.py       генератор демо-набора
+├── data/                    эталонные данные + demo/ (вымышленные; demo/package — пакет ВЭД, demo/bank — выписки)
+├── tools/make_demo.py       генератор демо-набора (make_demo_bank.py — выписки, 1С, 单一窗口)
 ├── tests/                   pytest
 ├── storage/                 рабочие данные (не в git): uploads/, runs/, reports/, rates/, journal.jsonl
-├── webui/                   интерфейс (RU / EN / 中文)
+├── webui/                   интерфейс (RU / EN / 中文): index.html, modes.js — два режима, offline.js — закрытый контур
 └── docs/                    SPECIALIST_GUIDE / CONNECTORS / DEPLOY / AGENT_GUIDE / USERS / CHANGELOG
 ```

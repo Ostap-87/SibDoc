@@ -133,9 +133,10 @@
     if(!card){
       card = document.createElement('div');
       card.className = 'card'; card.id = 'c-offline';
-      const wrap = document.querySelector('.wrap');
+      const ref = document.getElementById('c-journal');           // SibDoc3: карточки ретро — в своём экране
+      const wrap = ref ? ref.parentNode : document.querySelector('.wrap');
       if(!wrap) return;
-      wrap.insertBefore(card, document.getElementById('c-journal'));
+      wrap.insertBefore(card, ref || null);
       const nav = document.querySelector('nav.toc');
       if(nav && !nav.querySelector('a[href="#c-offline"]')){
         const a = document.createElement('a'); a.href = '#c-offline'; a.id = 'navOffline'; nav.appendChild(a);

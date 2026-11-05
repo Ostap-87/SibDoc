@@ -281,6 +281,8 @@ types:
       "金蝶": 4
       "yonyou": 4
       "用友": 4
+      "EnterpriseData": 12             # файл обмена 1С (поступление, ГТД, договоры — «В сверку» раскладывает по слотам)
+      "Документ.ПоступлениеТоваровУслуг": 6
     headers: {material: 4, sap_price: 3, sap_currency: 2, shipment_date: 2, main_contract: 2, add_contract: 2,
               storage_location: 2, container: 1}
     filename:
@@ -315,8 +317,28 @@ types:
       "кредит": 2
       "debit": 2
       "credit": 2
+      # форматы обмена с банком (ветка «коннекторы / банк», app/services/bank_statements.py)
+      "1CClientBankExchange": 14
+      "СекцияРасчСчет": 6
+      "СекцияДокумент": 4
+      "BkToCstmrStmt": 14
+      "CdtDbtInd": 6                   # camt.05x: теги со значениями (контейнерные теги в текст не попадают)
+      "ElctrncSeqNb": 6
+      "AcctSvcrRef": 3
+      "BkToCstmrAcctRpt": 12
+      "BkToCstmrDbtCdtNtfctn": 12
+      're:camt\.05[234]': 6
+      're:(?m)^:6[02][FM]:': 8
+      're:(?m)^:61:\d{6}': 6
+      "交易明细": 6
+      "借方发生额": 4
+      "贷方发生额": 4
+      "对方户名": 4
+      "交易日期": 2
+    xml_roots: [BkToCstmrStmt, BkToCstmrAcctRpt, BkToCstmrDbtCdtNtfctn]
     filename:
-      're:(выписк|statement|bank|банк|对账单|银行)': 4
+      're:(выписк|statement|bank|банк|对账单|银行|交易明细|kl_to_1c|mt940|camt)': 4
+      're:\.(sta|940|mt940)$': 6
 
   reference:
     label: "Справочник"

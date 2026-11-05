@@ -131,6 +131,12 @@ def write_excel(result: RunResult, cfg: dict, out_path: str) -> str:
             if s is not None and not s.df.empty:
                 df, hdr = _decl_frame(s, None)
                 _write(xw, df, sheet, used, hdr)
+        # Коннекторы/банк: выписки банка и реестр договоров целиком
+        for slot, title in (("bank", "Выписки банка"), ("contract_register", "Договоры")):
+            s = result.sources.get(slot)
+            if s is not None and not s.df.empty:
+                df, hdr = _decl_frame(s, ((cfg.get("sources") or {}).get(slot) or {}).get("fields"))
+                _write(xw, df, title, used, hdr)
         if result.rates_used:
             _write(xw, pd.DataFrame({"Курс / 汇率": result.rates_used}), "Курсы", used)
 

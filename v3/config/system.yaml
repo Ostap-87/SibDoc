@@ -85,6 +85,38 @@ sources:
     required_columns: ["Container number", "Price", "Main contract",
                        "Add contract", "Net weight"]
 
+  # ---------------------------------------------------- Коннекторы/банк
+  bank:
+    label: "Банк: выписки (1С «Клиент-банк», camt.053, MT940, Excel/CSV банков КНР и РФ)"
+    label_en: "Bank statements (1C Client-Bank, camt.053, MT940, CN/RU bank Excel/CSV)"
+    label_zh: "银行流水（1C 客户银行、camt.053、MT940、中国/俄罗斯银行 Excel/CSV）"
+    required: false
+    multi: true                     # выписки нескольких счетов и банков сразу
+    parser: bank_statement          # app/services/bank_statements.py: формат определяется сам
+    # own_accounts: ["40702156000000000001"]   # наши счета — для выписок КНР с колонками «付款人/收款人»
+    fields: {pay_date: pay_date, value_date: value_date, amount: amount, debit_amount: debit_amount,
+             credit_amount: credit_amount, pay_direction: pay_direction, currency: currency,
+             counterparty: counterparty, counterparty_inn: counterparty_inn,
+             counterparty_account: counterparty_account, counterparty_bank: counterparty_bank,
+             payer_name: payer_name, payer_account: payer_account, payee_name: payee_name,
+             payee_account: payee_account, purpose: purpose, account: account, reference: reference}
+    sections:
+      payment: [pay_date, amount, currency, pay_direction]
+      party:   [counterparty, purpose]
+    required_columns: [pay_date, amount, currency, pay_direction]
+
+  contract_register:
+    label: "Договоры и контрагенты (1С EnterpriseData / Excel)"
+    label_en: "Contracts register (1C EnterpriseData / Excel)"
+    label_zh: "合同登记（1C EnterpriseData / Excel）"
+    required: false
+    multi: true
+    fields: {contract: contract, contract_date: contract_date, counterparty: counterparty,
+             counterparty_inn: counterparty_inn, currency: currency, contract_amount: contract_amount, unk: unk}
+    sections:
+      main: [contract, counterparty, currency]
+    required_columns: [contract]
+
   ru_dt:
     label: "ДТ РФ (XML ФТС из программы брокера или Excel)"
     label_en: "RU customs declarations (FCS XML or Excel)"
@@ -231,6 +263,7 @@ checks:
   cross_border:    {enabled: true, rules: "cross_border.yaml"}
   # ВЭД-пакет: инвойс, упаковочный лист, транспортный документ, ДТ, 报关单, сертификаты
   docs_package:    {enabled: true, rules: "docs_package.yaml"}
+  payments:        {enabled: true, rules: "payments.yaml"}       # Коннекторы/банк: оплаты по выпискам
 
 # ----------------------------------------------------------------
 # DATA-QUALITY ДЕТЕКЦИЯ
@@ -251,6 +284,8 @@ data_quality:
     invoice: [qty, unit_price, total_value, net_weight, gross_weight, packages, invoice_total]
     packing: [qty, net_weight, gross_weight, packages]
     transport: [gross_weight, packages]
+    bank: [amount]                 # Коннекторы/банк
+    contract_register: [contract_amount]
 
 # ----------------------------------------------------------------
 # ВЫВОД
@@ -452,9 +487,12 @@ connectors:
   onec:
     type: onec_odata
     enabled: false
-    label: 1С (OData)
+    label: 1С (OData / выгрузки EnterpriseData)
     # Нужно от администратора 1С: публикация базы с «Публиковать стандартный интерфейс OData»,
-    # объекты в составе OData, пользователь с правом чтения.
+    # объекты в составе OData, пользователь с правом чтения. Проверено на эмуляторе.
+    # Пока OData нет (Коннекторы/банк): папка с файлами обмена EnterpriseData — поступление
+    # товаров -> purchase, ГТД по импорту -> ru_dt, договоры -> contract_register; kl_to_1c.txt -> bank.
+    # export_dir: /data/incoming/1c
     # base_url: "https://1c.example.ru/trade"
     # entity: "Document_ПоступлениеТоваровУслуг"
     # username: sibdoc
@@ -468,7 +506,10 @@ connectors:
     type: etran
     enabled: false
     label: ЭТРАН (РЖД)
-    # Нужно: договор с РЖД на веб-сервис ЭТРАН, пользователь ЭТРАН, сертификат ЭЦП (КриптоПро).
+    # Нужно: договор с ОАО «РЖД» (через ТЦФТО) на электронный обмен в АС ЭТРАН, пользователь
+    # ЭТРАН и код организации, ЭЦП организации (ГОСТ, КриптоПро CSP), адрес веб-сервиса и его
+    # руководство программиста (выдаёт РЖД). Подробно — docs/CONNECTORS.md.
+    # slot: transport                 # куда класть выгрузки из АРМ ЭТРАН (слот пакета ВЭД «Транспортный документ»)
     # service_url: ""                 # выдаёт РЖД по договору
     # login: ""
     # password_env: SIBDOC_ETRAN_PASSWORD
@@ -480,7 +521,9 @@ connectors:
     type: cn_single_window
     enabled: false
     label: Единое окно КНР (单一窗口)
-    # Нужно: UKey (卡介质) импортёра или брокера; открытого API нет — уточнить у брокера.
+    # Открытого API нет: основной режим — папка выгрузок (XML DecMessage, Excel-список
+    # «报关数据查询 → 导出», Excel/CSV брокера); слот определяется по содержимому файла.
+    # Прямой обмен — UKey (卡介质) импортёра или брокера и API ПО брокера (если есть).
     # role: broker                    # importer | broker
     # company_code: ""                # 海关10位编码 / 统一社会信用代码
     # ukey_holder: ""
@@ -493,7 +536,11 @@ connectors:
     type: kingdee
     enabled: false
     label: Kingdee 金蝶云星空
-    # Нужно от администратора Kingdee: адрес K3Cloud, 账套ID, пользователь с правом WebAPI.
+    # Нужно от администратора Kingdee: адрес K3Cloud, 账套ID, пользователь с правом WebAPI
+    # (или AppID/AppSecret: auth_mode: app_secret). Проверено на эмуляторе.
+    # auth_mode: password             # password | app_secret
+    # app_id: ""
+    # app_secret_env: SIBDOC_KINGDEE_APP_SECRET
     # server_url: "https://erp.example.cn/k3cloud"
     # acct_id: ""
     # username: ""
@@ -509,7 +556,9 @@ connectors:
     type: yonyou
     enabled: false
     label: Yonyou 用友 YonBIP
-    # Нужно от администратора YonBIP: 自建应用 с AppKey/AppSecret, адреса шлюза, путь API.
+    # Нужно от администратора YonBIP: 自建应用 с AppKey/AppSecret, адреса шлюза (или tenant_id),
+    # путь API. Проверено на эмуляторе.
+    # tenant_id: ""                   # вместо auth_url / gateway_url
     # auth_url: "https://<dc>.yonyoucloud.com/iuap-api-auth"
     # gateway_url: "https://<dc>.yonyoucloud.com/iuap-api-gateway"
     # app_key: ""
@@ -522,8 +571,11 @@ connectors:
   bank_fx:
     type: bank_fx_control
     enabled: false
-    label: Банк — валютный контроль
-    # Нужно: API банка для юрлиц (client_id/secret, сертификат) или выгрузка 1С:ДиректБанк.
+    label: Банк — выписки и валютный контроль
+    # Работает через выгрузки (Коннекторы/банк): папка, куда 1С:ДиректБанк / «Клиент-банк» /
+    # интернет-банк сохраняют выписки — 1CClientBankExchange (kl_to_1c.txt), camt.053/052/054,
+    # MT940, CSV/Excel банков КНР; всё -> слот bank, сверка — проверка «8. Оплаты».
+    # Прямой API банка (ВБК, УНК) — задел: договор с банком, client_id/secret, сертификат.
     # bank: ""
     # api_url: ""
     # client_id: ""
@@ -531,7 +583,7 @@ connectors:
     # cert_file: ""
     # cert_password_env: SIBDOC_BANK_CERT_PASSWORD
     # unk: []                         # УНК контрактов
-    # export_dir: /data/incoming/directbank
+    # export_dir: /data/incoming/bank  # папка выписок
 
 # ----------------------------------------------------------------
 # УВЕДОМЛЕНИЯ о прогонах и ошибках коннекторов (по умолчанию выключены)

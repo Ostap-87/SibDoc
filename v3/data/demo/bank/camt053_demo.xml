@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.08">
+  <BkToCstmrStmt>
+    <GrpHdr><MsgId>DEMO-STMT-20261003</MsgId><CreDtTm>2026-10-03T18:00:00</CreDtTm></GrpHdr>
+    <Stmt>
+      <Id>DEMO-STMT-USD-1</Id>
+      <ElctrncSeqNb>1</ElctrncSeqNb>
+      <CreDtTm>2026-10-03T18:00:00</CreDtTm>
+      <Acct><Id><Othr><Id>40702840000000000002</Id></Othr></Id><Ccy>USD</Ccy>
+        <Ownr><Nm>OOO PRIMER EXPORT (fictional)</Nm></Ownr></Acct>
+      <Bal><Tp><CdOrPrtry><Cd>OPBD</Cd></CdOrPrtry></Tp><Amt Ccy="USD">0.00</Amt><CdtDbtInd>CRDT</CdtDbtInd>
+        <Dt><Dt>2026-09-30</Dt></Dt></Bal>
+      <Bal><Tp><CdOrPrtry><Cd>CLBD</Cd></CdOrPrtry></Tp><Amt Ccy="USD">70899.86</Amt><CdtDbtInd>CRDT</CdtDbtInd>
+        <Dt><Dt>2026-10-03</Dt></Dt></Bal>
+      <Ntry>
+        <NtryRef>1</NtryRef>
+        <Amt Ccy="USD">34870.20</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Sts><Cd>BOOK</Cd></Sts>
+        <BookgDt><Dt>2026-09-30</Dt></BookgDt>
+        <ValDt><Dt>2026-09-30</Dt></ValDt>
+        <AcctSvcrRef>DEMO-BANK-0001</AcctSvcrRef>
+        <BkTxCd><Domn><Cd>PMNT</Cd><Fmly><Cd>RCDT</Cd><SubFmlyCd>XBCT</SubFmlyCd></Fmly></Domn></BkTxCd>
+        <NtryDtls><TxDtls>
+          <Refs><EndToEndId>DEMO-E2E-0003</EndToEndId></Refs>
+          <Amt Ccy="USD">34870.20</Amt>
+          <CdtDbtInd>CRDT</CdtDbtInd>
+          <RltdPties>
+            <Dbtr><Pty><Nm>DEMO IMPORT CO., LTD. (fictional)</Nm></Pty></Dbtr>
+            <DbtrAcct><Id><Othr><Id>DEMO-CN-ACC-0001</Id></Othr></Id></DbtrAcct>
+          </RltdPties>
+          <RltdAgts><DbtrAgt><FinInstnId><BICFI>DEMOCNSHXXX</BICFI></FinInstnId></DbtrAgt></RltdAgts>
+          <RmtInf><Ustrd>PAYMENT FOR CONTRACT DEMO.1002-01A INVOICE INV-DEMO-0003</Ustrd></RmtInf>
+        </TxDtls></NtryDtls>
+      </Ntry>
+      <Ntry>
+        <NtryRef>2</NtryRef>
+        <Amt Ccy="USD">36029.66</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Sts><Cd>BOOK</Cd></Sts>
+        <BookgDt><Dt>2026-10-02</Dt></BookgDt>
+        <ValDt><Dt>2026-10-02</Dt></ValDt>
+        <AcctSvcrRef>DEMO-BANK-0002</AcctSvcrRef>
+        <BkTxCd><Domn><Cd>PMNT</Cd><Fmly><Cd>RCDT</Cd><SubFmlyCd>XBCT</SubFmlyCd></Fmly></Domn></BkTxCd>
+        <NtryDtls><TxDtls>
+          <Refs><EndToEndId>DEMO-E2E-0006</EndToEndId></Refs>
+          <Amt Ccy="USD">36029.66</Amt>
+          <CdtDbtInd>CRDT</CdtDbtInd>
+          <RltdPties>
+            <Dbtr><Pty><Nm>DEMO IMPORT CO., LTD. (fictional)</Nm></Pty></Dbtr>
+            <DbtrAcct><Id><Othr><Id>DEMO-CN-ACC-0001</Id></Othr></Id></DbtrAcct>
+          </RltdPties>
+          <RltdAgts><DbtrAgt><FinInstnId><BICFI>DEMOCNSHXXX</BICFI></FinInstnId></DbtrAgt></RltdAgts>
+          <RmtInf><Ustrd>CONTRACT DEMO.1003-01A FULL PAYMENT</Ustrd></RmtInf>
+        </TxDtls></NtryDtls>
+      </Ntry>
+      <Ntry>
+        <NtryRef>3</NtryRef>
+        <Amt Ccy="USD">1000.00</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Sts><Cd>PDNG</Cd></Sts>
+        <BookgDt><Dt>2026-10-03</Dt></BookgDt>
+        <ValDt><Dt>2026-10-03</Dt></ValDt>
+        <AcctSvcrRef>DEMO-BANK-0003</AcctSvcrRef>
+        <BkTxCd><Domn><Cd>PMNT</Cd><Fmly><Cd>RCDT</Cd><SubFmlyCd>XBCT</SubFmlyCd></Fmly></Domn></BkTxCd>
+        <NtryDtls><TxDtls>
+          <Refs><EndToEndId>DEMO-E2E-0099</EndToEndId></Refs>
+          <Amt Ccy="USD">1000.00</Amt>
+          <CdtDbtInd>CRDT</CdtDbtInd>
+          <RltdPties>
+            <Dbtr><Pty><Nm>DEMO IMPORT CO., LTD. (fictional)</Nm></Pty></Dbtr>
+            <DbtrAcct><Id><Othr><Id>DEMO-CN-ACC-0001</Id></Othr></Id></DbtrAcct>
+          </RltdPties>
+          <RltdAgts><DbtrAgt><FinInstnId><BICFI>DEMOCNSHXXX</BICFI></FinInstnId></DbtrAgt></RltdAgts>
+          <RmtInf><Ustrd>PAYMENT ON THE WAY</Ustrd></RmtInf>
+        </TxDtls></NtryDtls>
+      </Ntry>
+    </Stmt>
+  </BkToCstmrStmt>
+</Document>

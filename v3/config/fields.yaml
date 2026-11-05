@@ -461,6 +461,160 @@ fields:
     synonyms: ["Документы гр. 44", "Графа 44", "Представленные документы", "Presented documents",
                "随附单证", "随附单据", "presented_docs"]
 
+  # ---------------------------------------------------- Коннекторы/банк: договоры и выписки банков
+  # Реестр договоров (1С EnterpriseData «Справочник.Договоры», Excel) и выписки банков:
+  # 1CClientBankExchange, camt.053, MT940, CSV/Excel интернет-банков КНР и РФ.
+  # Блок стоит в конце словаря: при совпадении названий выигрывают поля выше
+  # («Получатель» в ДТ — получатель товара, а не платежа).
+  # Слишком общие названия («Дата», «金额», «Сумма») сюда не добавлены — они только
+  # для выписок, в app/services/bank_statements.py (WEAK_HEADERS).
+  contract_date:
+    ru: "Дата договора"
+    en: "Contract date"
+    zh: "合同日期"
+    type: date
+    synonyms: [contract_date, "Дата договора", "Дата контракта", "合同日期", "签约日期", "Contract date"]
+  contract_amount:
+    ru: "Сумма договора"
+    en: "Contract amount"
+    zh: "合同金额"
+    type: number
+    synonyms: [contract_amount, "Сумма договора", "Сумма контракта", "合同金额", "合同总额", "Contract amount",
+               "Contract value"]
+  counterparty:
+    ru: "Контрагент"
+    en: "Counterparty"
+    zh: "对方户名"
+    type: text
+    synonyms: [counterparty, "Контрагент", "Наименование контрагента", "Корреспондент", "对方户名", "对方名称",
+               "对方账户名称", "对方账户名", "对方单位", "对方单位名称", "收(付)方名称", "收付方名称", "交易对手",
+               "Counterparty", "Counterparty name"]
+  counterparty_inn:
+    ru: "ИНН / код контрагента"
+    en: "Counterparty tax ID"
+    zh: "对方统一社会信用代码"
+    type: code
+    synonyms: [counterparty_inn, "ИНН контрагента", "ИНН плательщика/получателя", "对方统一社会信用代码",
+               "Counterparty INN", "Counterparty tax ID"]
+  counterparty_account:
+    ru: "Счёт контрагента"
+    en: "Counterparty account"
+    zh: "对方账号"
+    type: code
+    synonyms: [counterparty_account, "Счет контрагента", "Счёт контрагента", "对方账号", "对方账户",
+               "收(付)方账号", "收付方账号", "Counterparty account"]
+  counterparty_bank:
+    ru: "Банк контрагента"
+    en: "Counterparty bank"
+    zh: "对方开户行"
+    type: text
+    synonyms: [counterparty_bank, "Банк контрагента", "对方开户行", "对方开户机构", "对方行名", "收(付)方开户行",
+               "Counterparty bank"]
+  pay_date:
+    ru: "Дата операции"
+    en: "Transaction date"
+    zh: "交易日期"
+    type: date
+    synonyms: [pay_date, "Дата операции", "Дата проводки", "Дата платежа", "Дата списания/зачисления",
+               "交易日期", "记账日期", "交易日", "入账日期", "Booking date", "Transaction date", "Posting date"]
+  value_date:
+    ru: "Дата валютирования"
+    en: "Value date"
+    zh: "起息日"
+    type: date
+    synonyms: [value_date, "Дата валютирования", "起息日", "起息日期", "Value date"]
+  amount:
+    ru: "Сумма операции"
+    en: "Transaction amount"
+    zh: "交易金额"
+    type: number
+    synonyms: [amount, "Сумма операции", "Сумма платежа", "交易金额", "发生额", "Transaction amount",
+               "Payment amount"]
+  debit_amount:
+    ru: "Списано (дебет)"
+    en: "Debit"
+    zh: "借方发生额"
+    type: number
+    synonyms: [debit_amount, "Дебет", "Списано", "Расход", "Сумма по дебету", "Оборот по дебету", "借方发生额",
+               "借方金额", "借方发生额(支取)", "借方发生额/元(支取)", "支出金额", "支出", "付款金额", "Debit",
+               "Debit amount", "Withdrawal"]
+  credit_amount:
+    ru: "Зачислено (кредит)"
+    en: "Credit"
+    zh: "贷方发生额"
+    type: number
+    synonyms: [credit_amount, "Кредит", "Зачислено", "Приход", "Поступление", "Сумма по кредиту",
+               "Оборот по кредиту", "贷方发生额", "贷方金额", "贷方发生额(收入)", "贷方发生额/元(收入)",
+               "收入金额", "收入", "收款金额", "Credit", "Credit amount", "Deposit"]
+  pay_direction:
+    ru: "Приход / расход"
+    en: "In / out"
+    zh: "收支方向"
+    type: code
+    synonyms: [pay_direction, "Приход/расход", "Д/К", "Дебет/Кредит", "借贷标志", "借贷方向", "收支方向",
+               "收支标志", "借/贷", "交易方向", "Debit/Credit", "D/C", "Dr/Cr", "CdtDbtInd"]
+  payer_name:
+    ru: "Плательщик"
+    en: "Payer"
+    zh: "付款人名称"
+    type: text
+    synonyms: [payer_name, "Плательщик", "Наименование плательщика", "付款人名称", "付款人户名", "付款方名称",
+               "付款人", "付款方", "Payer", "Payer name", "Debtor", "Ordering customer"]
+  payer_account:
+    ru: "Счёт плательщика"
+    en: "Payer account"
+    zh: "付款人账号"
+    type: code
+    synonyms: [payer_account, "Счет плательщика", "Счёт плательщика", "付款人账号", "付款方账号", "付款账号",
+               "Payer account"]
+  payee_name:
+    ru: "Получатель платежа"
+    en: "Payee"
+    zh: "收款人名称"
+    type: text
+    synonyms: [payee_name, "Получатель платежа", "Наименование получателя", "Получатель", "收款人名称",
+               "收款人户名", "收款方名称", "收款人", "收款方", "Payee", "Beneficiary", "Creditor"]
+  payee_account:
+    ru: "Счёт получателя"
+    en: "Payee account"
+    zh: "收款人账号"
+    type: code
+    synonyms: [payee_account, "Счет получателя", "Счёт получателя", "收款人账号", "收款方账号", "收款账号",
+               "Payee account", "Beneficiary account"]
+  purpose:
+    ru: "Назначение платежа"
+    en: "Payment details"
+    zh: "用途 / 摘要"
+    type: text
+    synonyms: [purpose, "Назначение платежа", "Назначение", "Основание платежа", "交易摘要", "汇款用途",
+               "用途说明", "Purpose", "Payment details", "Remittance information", "Narrative", "Details"]
+  account:
+    ru: "Наш счёт"
+    en: "Own account"
+    zh: "本方账号"
+    type: code
+    synonyms: [account, "Наш счет", "Номер счета", "Расчетный счет", "Расчётный счёт", "Счёт организации",
+               "账号", "本方账号", "账户", "银行账号", "Account", "Account number", "IBAN"]
+  reference:
+    ru: "Документ / референс"
+    en: "Reference"
+    zh: "流水号"
+    type: code
+    synonyms: [reference, "Номер документа", "Номер п/п", "№ документа", "Референс", "流水号", "交易流水号",
+               "凭证号", "业务编号", "交易参考号", "Reference", "Transaction reference"]
+  entry_status:
+    ru: "Статус проводки"
+    en: "Entry status"
+    zh: "记账状态"
+    type: code
+    synonyms: [entry_status]
+  bank_format:
+    ru: "Формат выписки"
+    en: "Statement format"
+    zh: "流水格式"
+    type: text
+    synonyms: [bank_format]
+
 # ---------------------------------------------------------------- ВЭД-пакет
 # Дополнительные синонимы для полей, объявленных выше (добавляются к их списку
 # synonyms; на совпадение с чужим синонимом не влияют — выигрывает поле выше).
@@ -486,3 +640,5 @@ extra_synonyms:
   qty: ["Qty", "Q-ty", "Кол-во товара"]
   unit: ["Ед.", "Ед", "Unit of measure", "UOM"]
   container: ["Container No.", "Container Nos", "Контейнер №", "柜号"]
+  # SibDoc3: реестр договоров (1С, Excel) — «Договор» = номер внешнеторгового контракта
+  contract: ["Договор", "Номер договора", "№ договора", "Договор №", "Contract", "合同编号"]

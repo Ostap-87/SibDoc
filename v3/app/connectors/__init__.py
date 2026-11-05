@@ -2,9 +2,11 @@
 """Реестр коннекторов источников данных.
 
 Первая очередь (stage "ready", работают по-настоящему): folder, sftp, imap, rest,
-database, sap_odata. Вторая очередь (stage "needs_access", задел до получения
-доступа): onec_odata, kingdee, yonyou, etran, cn_single_window, bank_fx_control.
-Все коннекторы по умолчанию выключены (enabled: false).
+database, sap_odata. Вторая очередь (stage "needs_access" — прямой доступ ещё не выдан):
+onec_odata, kingdee, yonyou — обмен реализован и проверен на эмуляторе (tests/emulators.py);
+bank_fx_control, cn_single_window, etran — работают через выгрузки в папку (export_dir),
+прямой обмен — задел. Статус экземпляра — Connector.status(): works | via_exports |
+needs_access (что нужно и у кого). Все коннекторы по умолчанию выключены (enabled: false).
 
 Добавление нового коннектора: унаследоваться от Connector (или RestConnector /
 StubConnector), задать type/title/stage/params, реализовать _test()/_pull(),

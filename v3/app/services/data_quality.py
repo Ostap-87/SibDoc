@@ -56,6 +56,10 @@ CHECK_COLUMN_DEPS: dict[str, dict[str, list[str]]] = {
         "hs_code": ["hs_code"],
     },
     "cde_reference": {},
+    # Коннекторы/банк
+    "bank": {"pay_date": ["payments"], "amount": ["payments"], "currency": ["payments"],
+             "pay_direction": ["payments"], "counterparty": ["payments"], "purpose": ["payments"]},
+    "contract_register": {"contract": ["payments"], "counterparty": ["payments"], "currency": ["payments"]},
 }
 
 CHECK_TITLES = {
@@ -66,6 +70,7 @@ CHECK_TITLES = {
     "decl_elements": "4. Decl. elements",
     "contracts": "5. Contract",
     "cross_border": "6. ДТ ↔ 报关单 ↔ SAP",
+    "payments": "8. Оплаты",          # Коннекторы/банк
 }
 
 # Ключи для поиска дублей

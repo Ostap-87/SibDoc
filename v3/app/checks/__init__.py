@@ -37,3 +37,4 @@ from app.checks import (  # noqa: E402,F401
 )
 # ВЭД-пакет: сверка документов отгрузки (инвойс, упаковочный лист, накладная, ДТ, 报关单, сертификаты)
 from app.checks import docs_package  # noqa: E402,F401
+from app.checks import payments  # noqa: E402,F401 — Коннекторы/банк: оплаты по выпискам

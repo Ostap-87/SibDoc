@@ -125,6 +125,8 @@ PKG_COLUMNS = {
     "conformity": ["doc_type", "cert_no", "issue_date", "expiry_date", "product_name", "hs_code", "origin_country",
                    "invoice_no"],
 }
+PDF_COLUMNS["payments"] = ["level", "pay_date", "contract", "counterparty", "amount", "currency",   # Коннекторы/банк
+                           "status", "detail"]
 RU_HEADER = ["decl_ru", "decl_date", "procedure", "consignor", "consignee", "contract", "currency", "total_value",
              "incoterms", "delivery_place", "customs_office", "source_file"]
 RU_GOODS = ["item_no", "hs_code", "product_name", "container", "net_weight", "gross_weight", "total_value",

@@ -379,7 +379,11 @@ def grid_to_frame(grid: list[list], kind: str, slot_cfg: dict, filename: str) ->
         df["doc_type"] = df["doc_type"].map(lambda v: norm_doc_type(kind, v) if not is_blank(v) else v)
     df = df.dropna(how="all").reset_index(drop=True)
     df = df.loc[:, [c for c in df.columns if not df[c].map(is_blank).all()]]
-    df.insert(0, "source_file", filename)
+    if "source_file" in df.columns:          # SibDoc3: строки из пакета уже знают свой документ
+        src = df.pop("source_file").map(lambda v: filename if is_blank(v) else v)
+        df.insert(0, "source_file", src)
+    else:
+        df.insert(0, "source_file", filename)
     info.update({"header_block": sorted(block), "totals": sorted(totals), "table": h >= 0, "score": score})
     return df, info
 

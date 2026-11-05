@@ -45,6 +45,7 @@ EXT_FORMAT = {
     ".doc": "legacy", ".rtf": "legacy", ".odt": "legacy", ".ods": "legacy",
     ".xml": "xml",
     ".txt": "txt", ".text": "txt", ".log": "txt", ".md": "txt",
+    ".sta": "txt", ".940": "txt", ".mt940": "txt",          # выписки банка SWIFT MT940
     ".htm": "html", ".html": "html",
     ".eml": "eml",
     ".zip": "zip",
