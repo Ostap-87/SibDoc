@@ -90,41 +90,42 @@ elif ! bash "$APP_DIR/install_ocr_mac.command"; then
     echo "      Не получилось скачать Tesseract — всё остальное работает. Повторить: bash install_ocr_mac.command"
 fi
 
-echo "[4/4] Создаю приложение SibDoc в ~/Applications"
-APP="$HOME/Applications/SibDoc.app"
+echo "[4/4] Создаю приложение «SibDoc 3» в ~/Applications (старая версия «SibDoc» не трогается)"
+APP="$HOME/Applications/SibDoc 3.app"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$HOME/Library/Logs"
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
-  <key>CFBundleName</key><string>SibDoc</string>
-  <key>CFBundleDisplayName</key><string>SibDoc</string>
-  <key>CFBundleIdentifier</key><string>ru.sibdoc.desktop</string>
-  <key>CFBundleVersion</key><string>2.0</string>
-  <key>CFBundleShortVersionString</key><string>2.0</string>
+  <key>CFBundleName</key><string>SibDoc 3</string>
+  <key>CFBundleDisplayName</key><string>SibDoc 3</string>
+  <key>CFBundleIdentifier</key><string>ru.sibdoc3.desktop</string>
+  <key>CFBundleVersion</key><string>3.0</string>
+  <key>CFBundleShortVersionString</key><string>3.0</string>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleExecutable</key><string>SibDoc</string>
+  <key>CFBundleExecutable</key><string>SibDoc3</string>
   <key>CFBundleIconFile</key><string>SibDoc</string>
   <key>LSMinimumSystemVersion</key><string>11.0</string>
   <key>NSHighResolutionCapable</key><true/>
 </dict></plist>
 PLIST
-cat > "$APP/Contents/MacOS/SibDoc" <<LAUNCH
+cat > "$APP/Contents/MacOS/SibDoc3" <<LAUNCH
 #!/bin/bash
 cd "$APP_DIR"
-exec "$APP_DIR/.venv/bin/python" "$APP_DIR/sibdoc_gui.py" >> "\$HOME/Library/Logs/SibDoc.log" 2>&1
+export SIBDOC_PORT="\${SIBDOC_PORT:-8030}"
+exec "$APP_DIR/.venv/bin/python" "$APP_DIR/sibdoc_gui.py" >> "\$HOME/Library/Logs/SibDoc3.log" 2>&1
 LAUNCH
-chmod +x "$APP/Contents/MacOS/SibDoc"
+chmod +x "$APP/Contents/MacOS/SibDoc3"
 cp "$APP_DIR/assets/SibDoc.icns" "$APP/Contents/Resources/SibDoc.icns"
 touch "$APP"
 /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$APP" 2>/dev/null || true
 # значок на рабочем столе (ссылка на приложение)
-ln -sfn "$APP" "$HOME/Desktop/SibDoc"
-# если SibDoc уже открыт — закрываем, чтобы запустился обновлённый
+ln -sfn "$APP" "$HOME/Desktop/SibDoc 3"
+# если SibDoc 3 уже открыт — закрываем, чтобы запустился обновлённый (старый SibDoc не трогаем)
 pkill -f "$APP_DIR/sibdoc_gui.py" 2>/dev/null || true
 
 echo
-echo "ГОТОВО. Значок «SibDoc» — на рабочем столе; само приложение — в папке «Программы» вашего"
+echo "ГОТОВО. Значок «SibDoc 3» — на рабочем столе; само приложение — в папке «Программы» вашего"
 echo "пользователя (~/Applications). Чтобы держать под рукой, перетащите значок в Dock."
 echo "Не переносите и не удаляйте папку $APP_DIR — приложение запускается из неё."
 open "$APP"

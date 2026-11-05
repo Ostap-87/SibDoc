@@ -51,7 +51,7 @@ try:
 except ImportError:                      # окна нет — открываем в браузере по умолчанию
     import webbrowser
     webbrowser.open(URL)
-    print(f"SibDoc работает: {URL} (Ctrl+C — остановить)")
+    print(f"SibDoc 3 работает: {URL} (Ctrl+C — остановить)")
     while True:
         time.sleep(3600)
 
@@ -60,7 +60,7 @@ try:
     webview.settings["OPEN_EXTERNAL_LINKS_IN_BROWSER"] = True
 except Exception:
     pass
-window = webview.create_window("SibDoc", URL, width=1440, height=920, min_size=(1100, 720))
+window = webview.create_window("SibDoc 3", URL, width=1440, height=920, min_size=(1100, 720))
 window.events.closed += lambda: os._exit(0)
 webview.start()
 os._exit(0)

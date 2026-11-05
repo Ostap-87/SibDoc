@@ -28,19 +28,29 @@
 выгрузки» / «нужен доступ: что и у кого»: 1С (OData и EnterpriseData), Kingdee и Yonyou (проверено на
 эмуляторе), Единое окно КНР и ЭТРАН (через выгрузки). Подробно — `docs/CONNECTORS.md`.
 
-**На Mac (окно приложения):** скачайте репозиторий (Code → Download ZIP), распакуйте и в Терминале
-выполните `bash ~/Downloads/sibdoc-main/install_mac.command` — появится приложение «SibDoc» в
-~/Applications (Launchpad, Dock). Нужен Python 3.11+ с python.org; установщик подскажет.
+**На Mac (окно приложения «SibDoc 3», отдельно от старой версии):** скачайте репозиторий `Ostap-87/SibDoc`
+(Code → Download ZIP), распакуйте и в Терминале выполните `bash ~/Downloads/SibDoc-main/v3/install_mac.command` — появится
+приложение «SibDoc 3» в ~/Applications и значок «SibDoc 3» на рабочем столе (порт 8030, журнал `~/Library/Logs/SibDoc3.log`).
+Старое приложение «SibDoc» (версия 2.0.1 из корня репозитория) остаётся как было. Нужен Python 3.11+ с python.org.
 Если pypi.org отвечает медленно (Китай, часть сетей в России), установщик сам берёт библиотеки с зеркала
 (Цинхуа или Alibaba); своё зеркало: `PIP_INDEX_URL=<адрес> bash install_mac.command`.
-В браузере вместо окна: `start_mac.command`.
-Установщик кладёт значок «SibDoc» на рабочий стол и ставит распознавание сканов (Tesseract) готовой сборкой
+В браузере вместо окна: `start_mac.command` → http://127.0.0.1:8030.
+
+**Как проверить за 10 минут** (на демо-данных, без своих документов):
+1. Откройте «SibDoc 3» → первый экран «С какими данными работаем?».
+2. «Реальное время» → перетащите `data/demo/package/Пакет_документов_отгрузка_0000117.zip` → 26 документов распознаются
+   сами → «Проверить отгрузку» → таблица OK / REVIEW / ISSUE (на демо: 36 строк, 29 / 1 / 6) → «Скачать Проверка отгрузки.xlsx».
+3. Переключатель в шапке «Ретро данные» → «Загрузить пакет документов» → «Добавить в сверку» → «Проверить» → проверки 1–8,
+   отчёт Excel / PDF.
+4. Без интернета: выключите Wi-Fi и повторите шаги 2–3 — всё работает; в шапке «Закрытый контур: интернет не используется».
+   Интернет нужен только один раз — при установке (библиотеки и Tesseract) или комплект для установки без сети (`docs/OFFLINE.md`).
+Установщик кладёт значок «SibDoc 3» на рабочий стол и ставит распознавание сканов (Tesseract) готовой сборкой
 conda-forge в папку `.ocr` (~200 МБ, без Homebrew; отдельно — `bash install_ocr_mac.command`).
-Обновить уже установленный SibDoc (папка на рабочем столе, `.venv` и `.ocr` сохраняются):
+Обновить уже установленный SibDoc 3 (берётся только папка `v3/` репозитория; `.venv`, `.ocr` и `storage` сохраняются):
 
 ```bash
-cd ~/Desktop/sibdoc-main && curl -fsSL https://codeload.github.com/Ostap-87/SibDoc/tar.gz/refs/heads/main \
-  | tar -xzf - --strip-components=1 && bash install_mac.command
+cd ~/Downloads/SibDoc-main/v3 && curl -fsSL https://codeload.github.com/Ostap-87/SibDoc/tar.gz/refs/heads/main \
+  | tar -xzf - --strip-components=2 '*/v3/*' && bash install_mac.command
 ```
 
 **SibDoc3: закрытый контур (без интернета).** По умолчанию программа не обращается в интернет
