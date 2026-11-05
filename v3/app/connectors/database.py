@@ -48,6 +48,7 @@ class DatabaseConnector(Connector):
         url = self.secret("url")
         if not url:
             raise ConnectorError("не задан url подключения (url_env)")
+        self._offline_check(url)                     # SibDoc3: закрытый контур
         try:
             return create_engine(url, connect_args={"timeout": self.opt_int("timeout_sec", 300)}
                                  if url.startswith("sqlite") else {})

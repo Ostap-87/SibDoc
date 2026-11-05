@@ -15,6 +15,15 @@ if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
 
+@pytest.fixture(autouse=True)
+def _contour_off_for_online_tests(monkeypatch):
+    """SibDoc3: закрытый контур включён по умолчанию (config/system.yaml → offline).
+    Старые тесты проверяют работу с сетью (подменённой) — для них контур выключен;
+    тесты контура (tests/test_offline.py) включают его сами."""
+    monkeypatch.setenv("SIBDOC_OFFLINE", "0")
+    monkeypatch.delenv("SIBDOC_OFFLINE_ALLOW", raising=False)
+
+
 @pytest.fixture(scope="session")
 def cfg():
     from app.config_loader import load_config

@@ -107,7 +107,10 @@ docker exec postcontrol python run_cli.py \
   `config/system.yaml` указываются только имена переменных (`password_env: …`).
 - **Курсы валют** скачиваются с `www.cbr.ru` и `www.chinamoney.com.cn` — откройте доступ к ним
   или включите `offline: true` в `config/rates.yaml` и вводите курсы вручную.
+  SibDoc3: в закрытом контуре (по умолчанию) курсы загружаются файлами — `docs/OFFLINE.md`.
 - **Размер файла** — до 100 МБ (`server.max_upload_mb`), **CORS** — `server.cors_origins`
   (в рабочей установке укажите адрес сервера вместо `*`).
 - **Без интернета:** `pip download -r requirements.txt -d vendor` на машине с интернетом,
-  затем `install.sh` поставит всё из `vendor/`.
+  затем `install.sh` поставит всё из `vendor/`. SibDoc3: полный комплект (библиотеки для
+  нескольких платформ, Tesseract, Python, образ Docker) — `tools/make_offline_bundle.sh`,
+  установка — `install.sh --offline wheelhouse`, подробно — `docs/OFFLINE.md`.

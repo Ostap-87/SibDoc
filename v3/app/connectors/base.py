@@ -246,7 +246,7 @@ class Connector:
 
     def test(self, user: str = "system") -> dict:
         """-> {"ok": bool, "detail": str}"""
-        gate = self._gate()
+        gate = self._gate() or self._offline_gate()        # SibDoc3: закрытый контур
         if gate:
             res = {"ok": False, "detail": gate}
         else:
@@ -269,7 +269,7 @@ class Connector:
     def pull(self, dest_dir: str, user: str = "system") -> list[dict]:
         """-> [{"slot": str|None, "file": исходное имя, "path": abs_path, "rows": int|None}]"""
         self.last_notes = []
-        gate = self._gate()
+        gate = self._gate() or self._offline_gate()        # SibDoc3: закрытый контур
         try:
             if gate:
                 raise ConnectorError(gate)
@@ -449,13 +449,47 @@ class Connector:
         return path, len(rows)
 
     # ================================================================ http
-    @staticmethod
-    def _requests():
+    def _requests(self):
         try:
             import requests
         except ImportError as exc:  # pragma: no cover
             raise ConnectorError("пакет requests не установлен (pip install requests)") from exc
-        return requests
+        # SibDoc3: закрытый контур — каждый запрос (и редирект, и «следующая страница»
+        # из ответа API) проходит app.netguard.check()
+        from app import netguard
+        return netguard.guarded_requests(requests, ConnectorError, f"коннектор «{self.label}»")
+
+    # ================================================================ закрытый контур
+    # SibDoc3: закрытый контур — параметры, в которых записан адрес сервера
+    NET_KEYS = ("host", "url", "base_url", "server_url", "service_url", "api_url", "token_url",
+                "auth_url", "gateway_url", "issuer_url", "endpoint", "wsdl_url")
+
+    def _offline_targets(self) -> list[str]:
+        """Адреса серверов из параметров коннектора (секретная строка БД — тоже)."""
+        out = []
+        for key in self.NET_KEYS:
+            v = self.opt(key) if key in self.cfg else None
+            if v in (None, "") and (key + "_env") in self.cfg:
+                v = self.secret(key)
+            if isinstance(v, str) and v.strip():
+                out.append(v.strip())
+        return out
+
+    def _offline_check(self, target) -> None:
+        """Перед соединением (IMAP, SFTP, БД): сервер вне контура — ConnectorError."""
+        from app import netguard
+        msg = netguard.blocked_reason(target, f"коннектор «{self.label}»")
+        if msg:
+            raise ConnectorError(msg)
+
+    def _offline_gate(self) -> str | None:
+        """Текст отказа, если сервер коннектора вне закрытого контура (config: offline)."""
+        from app import netguard
+        for target in self._offline_targets():
+            msg = netguard.blocked_reason(target, f"коннектор «{self.label}»")
+            if msg:
+                return msg
+        return None
 
     def _verify(self):
         ca = self.opt("ca_bundle")

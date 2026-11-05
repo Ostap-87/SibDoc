@@ -1,0 +1,83 @@
+# ================================================================
+#  ПРОВЕРКА БЛИЖАЙШЕЙ ОТГРУЗКИ (SibDoc 3, режим «реальное время»)
+#
+#  Декларация, распознанная со скана (ДТ РФ или 报关单), сверяется поле за
+#  полем и строка за строкой с:
+#    draft     — Excel-черновиком декларации из пакета;
+#    system    — системными данными: выгрузка SAP / 1С из пакета или данные,
+#                уже загруженные в слоты ретро-режима (Purchase, wide table, коннекторы);
+#    reference — справочниками: папка references/ (HS-коды, элементы декларации CDE),
+#                справочники и контракты из пакета;
+#    database  — база данных через коннектор типа database (если настроен).
+#  Статус строки: OK / REVIEW / ISSUE, причина — по-русски и по-китайски.
+#
+#  kind — как сравнивать: decl (номер декларации), code (код как есть),
+#    text (похожесть ≥ fuzzy), contract (с учётом склеенных и доп. соглашений),
+#    incoterms (C&F = CFR, место отбрасывается), currency, hs (совпадение
+#    первых hs_prefix_len знаков = REVIEW), number (допуски), containers (наборы),
+#    model (без пробелов / дефисов / регистра), date.
+#  key: true — ключевое поле: расхождение = ISSUE, не распознано на скане = REVIEW;
+#    у остальных полей расхождение = REVIEW (или on_mismatch: issue | review).
+# ================================================================
+
+ocr_review_below: 0.6          # уверенность значения скана ниже — ISSUE смягчается до REVIEW «проверить по оригиналу»
+hs_prefix_len: 6               # совпали первые N знаков кода — REVIEW (то же семейство)
+per_kg_threshold: 100          # цена без единицы ниже порога — «за кг» (как в проверке цен)
+
+header_fields:
+  - {field: decl_ru, kind: decl, key: true}
+  - {field: decl_cn, kind: decl, key: true}
+  - {field: contract, kind: contract, key: true}
+  - {field: incoterms, kind: incoterms, key: true}
+  - {field: currency, kind: currency, key: true}
+  - {field: container, kind: containers, key: true}
+  - {field: consignor, kind: text, fuzzy: 0.8}
+  - {field: consignee, kind: text, fuzzy: 0.8}
+  - {field: delivery_place, kind: text, fuzzy: 0.8}
+  - {field: decl_date, kind: date}
+  - {field: total_value, kind: number, tolerance_pct: 0, tolerance_abs: 1}         # стоимость: до 1 (округление)
+
+item_fields:
+  - {field: hs_code, kind: hs, key: true}
+  - {field: product_name, kind: text, fuzzy: 0.75}
+  - {field: model, kind: model}
+  - {field: decl_elements, kind: text, fuzzy: 0.8}
+  - {field: origin_country, kind: code}
+  - {field: qty, kind: number, tolerance_pct: 0.5, tolerance_abs: 0.001}
+  - {field: net_weight, kind: number, tolerance_pct: 0.5, tolerance_abs: 1, key: true}
+  - {field: gross_weight, kind: number, tolerance_pct: 1, tolerance_abs: 1}
+  - {field: unit_price, kind: number, tolerance_pct: 0, tolerance_abs: 0.001, key: true}  # цена за кг 10.157 ≠ 10.175
+  - {field: total_value, kind: number, tolerance_pct: 0, tolerance_abs: 1, key: true}
+  - {field: container, kind: containers}
+
+# Сопоставление строк скана и черновика: баллы за совпадение признаков,
+# пара засчитывается от min_score (по убыванию баллов)
+match:
+  item_no: 3                   # № товара
+  container: 3                 # общий контейнер
+  hs_code: 2                   # первые 4 знака кода
+  description: 2               # похожее наименование / марка
+  description_fuzzy: 0.6
+  min_score: 3
+unmatched_draft_line: issue    # строки черновика нет в декларации
+unmatched_scan_line: issue     # строки декларации нет в черновике
+
+system:
+  source: auto                 # auto — выгрузка SAP/1С из пакета, иначе данные ретро-слотов; package | retro | none
+  net_weight_unit: auto        # t | kg | auto (медиана веса > 500 — значит, в килограммах)
+  weight_tolerance_pct: 0.5
+  weight_tolerance_kg: 1
+  extra_containers: issue      # контейнер есть в системе (по номеру ДТ), но нет в декларации
+
+reference:
+  hs_code: true                # код по марке / материалу (та же логика, что проверка «2. HS code»)
+  decl_elements: [cn_dec]      # марка и 申报要素 против CDE (проверка «4. Decl. elements») — для каких деклараций
+  contracts: true              # контракт декларации есть среди контрактов пакета / references/contracts.csv
+
+database:                      # необязательно: коннектор type: database из config/system.yaml → connectors
+  connector: ""                # например finebi_db; его queries дают строки в формате Purchase
+  slots: [purchase]
+
+currency:
+  convert: false               # true — разные валюты пересчитываются по курсу (модуль курсов; в закрытом
+                               # контуре — ручные курсы или кэш, config/rates.yaml → offline: true)

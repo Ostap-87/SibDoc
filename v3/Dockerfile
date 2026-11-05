@@ -28,7 +28,11 @@ COPY run_cli.py .
 # Работаем не от root: отдельный пользователь, права только на storage
 RUN useradd --create-home --uid 10001 sibdoc \
     && mkdir -p storage/reports storage/uploads storage/runs \
-    && chown -R sibdoc:sibdoc storage config/rules config/rates.yaml
+    && chown -R sibdoc:sibdoc storage config/rules config/rates.yaml \
+       references config/fields.yaml config/scan_fields.yaml config/scan_mapping.yaml config/xml_profiles.yaml \
+    && chown sibdoc:sibdoc config
+# SibDoc3: закрытый контур — справочники и словари обновляются с носителя (docs/OFFLINE.md);
+# файлы в config/ заменяются атомарно (временный файл рядом), поэтому папке config нужны права записи
 USER sibdoc
 
 EXPOSE 8000

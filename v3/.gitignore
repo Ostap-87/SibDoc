@@ -10,3 +10,9 @@ storage/*
 .pytest_cache/
 .ocr/
 .ocr-tmp/
+# SibDoc3: закрытый контур — комплект для установки без интернета (tools/make_offline_bundle.py)
+wheelhouse/
+dist/
+offline/
+assets/fonts/cjk.ttc
+assets/fonts/cjk.ttf

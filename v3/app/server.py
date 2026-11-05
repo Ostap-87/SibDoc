@@ -15,6 +15,8 @@ from __future__ import annotations
   /api/connectors/*, /api/notifications/* — коннекторы и уведомления
   /api/journal, /api/journal/export — журнал событий
   /api/scans/*                      — сканы деклараций (OCR) и перенос в источники
+  /api/offline, /api/rates/import, /api/offline/update — закрытый контур (app/offline_api.py)
+  /api/intake/*, /api/realtime/*    — SibDoc3: пакетная загрузка и проверка отгрузки (app/api_intake.py)
 
 Запуск:  uvicorn app.server:app --host 0.0.0.0 --port 8000
 """
@@ -33,6 +35,7 @@ from pydantic import BaseModel
 
 from app import fields as fdict
 from app import journal, security
+from app.api_intake import router as intake_router  # SibDoc3: реальное время — пакетная загрузка и проверка отгрузки
 from app.config_loader import (diff_rules, known_rule_files, load_config, load_rules, load_rules_version,
                                rules_history, save_rules)
 from app.models import Source
@@ -58,6 +61,7 @@ def _cfg() -> dict:
 app = FastAPI(title="SibDoc 3 API", version="3.0.0-dev")
 app.add_middleware(CORSMiddleware, allow_origins=(_cfg().get("server") or {}).get("cors_origins") or ["*"],
                    allow_methods=["*"], allow_headers=["*"])
+app.include_router(intake_router)  # SibDoc3: реальное время
 
 # Загруженные источники (в памяти; файлы — на диске в storage/uploads/<слот>/).
 _uploads: dict[str, Source] = {}
@@ -934,6 +938,13 @@ def report_pdf():
     if not os.path.exists(path):
         raise HTTPException(404, "Отчёт ещё не сформирован — запустите /api/run")
     return FileResponse(path, filename="post_control_report.pdf")
+
+
+# ------------------------------------------------------------------ SibDoc3: закрытый контур
+# курсы из файлов, обновление с носителя, состояние контура — app/offline_api.py
+from app.offline_api import router as _offline_router  # noqa: E402
+
+app.include_router(_offline_router)
 
 
 # ------------------------------------------------------------------ static UI

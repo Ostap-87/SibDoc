@@ -3,6 +3,8 @@
 # Ставит готовую сборку tesseract из conda-forge в папку .ocr рядом с программой:
 # ~200 МБ скачивания и пара минут вместо часов сборки Homebrew на Mac с Intel.
 # Запускается из install_mac.command (шаг 3) или отдельно: bash install_ocr_mac.command
+# SibDoc3: закрытый контур — без интернета, из комплекта tools/make_offline_bundle.py --with-ocr:
+#   bash install_ocr_mac.command --offline offline/ocr      (пакеты conda-forge, micromamba)
 set -e
 cd "$(dirname "$0")"
 DEST="$PWD/.ocr"
@@ -21,6 +23,30 @@ case "$(uname -s)-$(uname -m)" in
     *) echo "      Эта система не поддерживается: $(uname -s) $(uname -m)"; exit 1 ;;
 esac
 
+# ---- SibDoc3: закрытый контур — установка из комплекта (без сети)
+OFF="${SIBDOC_OCR_OFFLINE_DIR:-}"
+case "${1:-}" in
+    --offline) OFF="${2:-offline/ocr}" ;;
+    --offline=*) OFF="${1#--offline=}" ;;
+esac
+if [ -n "$OFF" ]; then
+    case "$PLAT" in osx-arm64) NAME=mac-arm64 ;; osx-64) NAME=mac-x86_64 ;;
+                    linux-64) NAME=linux-x86_64 ;; linux-aarch64) NAME=linux-aarch64 ;; esac
+    [ -d "$OFF/$NAME" ] && OFF="$OFF/$NAME"
+    if [ ! -x "$OFF/micromamba" ] || [ ! -d "$OFF/root/pkgs" ]; then
+        echo "      В «$OFF» нет пакетов Tesseract для $NAME (нужны micromamba и root/pkgs —"
+        echo "      tools/make_offline_bundle.py --with-ocr --platforms $NAME на компьютере с интернетом)"
+        exit 1
+    fi
+    CH=$(head -1 "$OFF/channel.txt" 2>/dev/null || echo https://conda.anaconda.org/conda-forge)
+    rm -rf "$TMP" "$DEST"
+    mkdir -p "$TMP"
+    trap 'rm -rf "$TMP"' EXIT
+    echo "      Ставлю Tesseract из комплекта ($OFF), без интернета…"
+    cp -R "$OFF/root" "$TMP/root"                 # носитель может быть только для чтения
+    MAMBA_ROOT_PREFIX="$TMP/root" "$OFF/micromamba" create -y -q --offline -p "$DEST" \
+        --override-channels -c "$CH" tesseract >/dev/null
+else
 rm -rf "$TMP" "$DEST"
 mkdir -p "$TMP"
 trap 'rm -rf "$TMP"' EXIT
@@ -55,6 +81,7 @@ echo "      Источник: $CH ($((BEST / 1024)) КБ/с)"
 echo "      Скачиваю и ставлю Tesseract (~200 МБ, несколько минут)…"
 export MAMBA_ROOT_PREFIX="$TMP/root" MAMBA_REMOTE_MAX_RETRIES=10 MAMBA_REMOTE_CONNECT_TIMEOUT_SECS=30
 "$MM" create -y -q -p "$DEST" --override-channels -c "$CH" tesseract >/dev/null
+fi
 
 # языки берутся из папки tessdata программы (rus, eng, chi_sim); свои языки сборки не нужны
 find "$DEST/share/tessdata" -maxdepth 1 -name '*.traineddata' ! -name eng.traineddata ! -name osd.traineddata \

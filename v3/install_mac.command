@@ -5,11 +5,29 @@
 #  Что делает: проверяет Python 3.11+, ставит зависимости в папку .venv,
 #  ставит Tesseract для сканов (.ocr), создаёт приложение «SibDoc» в ~/Applications
 #  и значок на рабочем столе. Повторный запуск обновляет установку.
+#  SibDoc3: закрытый контур — без интернета, из комплекта tools/make_offline_bundle.py:
+#    bash install_mac.command --offline wheelhouse   (папка ./wheelhouse находится сама)
 # ============================================================
 set -e
 cd "$(dirname "$0")"
 APP_DIR="$(pwd)"
 echo "=== SibDoc: установка в $APP_DIR ==="
+
+# ---- SibDoc3: закрытый контур — параметры
+OFFDIR="${SIBDOC_OFFLINE_DIR:-}"
+case "${1:-}" in
+    --offline) OFFDIR="${2:-wheelhouse}" ;;
+    --offline=*) OFFDIR="${1#--offline=}" ;;
+esac
+if [ -z "$OFFDIR" ] && [ -n "$(find wheelhouse -maxdepth 2 -name '*.whl' 2>/dev/null | head -1)" ]; then
+    OFFDIR=wheelhouse
+fi
+if [ -n "$OFFDIR" ]; then
+    [ -n "$(find "$OFFDIR" -maxdepth 2 -name '*.whl' 2>/dev/null | head -1)" ] \
+        || { echo "В папке «$OFFDIR» нет библиотек *.whl — соберите комплект: tools/make_offline_bundle.command"; exit 1; }
+    export PIP_NO_INDEX=1 PIP_DISABLE_PIP_VERSION_CHECK=1
+    echo "    Закрытый контур: библиотеки — из $OFFDIR, интернет не нужен"
+fi
 
 PY=""
 for c in python3.13 python3.12 python3.11 /opt/homebrew/bin/python3 /usr/local/bin/python3 /Library/Frameworks/Python.framework/Versions/Current/bin/python3 python3; do
@@ -20,16 +38,30 @@ for c in python3.13 python3.12 python3.11 /opt/homebrew/bin/python3 /usr/local/b
 done
 if [ -z "$PY" ]; then
     echo
-    echo "Нужен Python 3.11 или новее. Сейчас откроется python.org:"
-    echo "скачайте «macOS 64-bit universal2 installer», установите и запустите этот файл ещё раз."
-    open "https://www.python.org/downloads/macos/"
+    PKG=$(ls offline/python/*.pkg 2>/dev/null | head -1 || true)
+    if [ -n "$OFFDIR" ] || [ -n "$PKG" ]; then          # SibDoc3: закрытый контур
+        echo "Нужен Python 3.11 или новее: установите его из комплекта (${PKG:-offline/python/*.pkg})"
+        echo "и запустите этот файл ещё раз."
+        [ -n "$PKG" ] && open "$PKG"
+    else
+        echo "Нужен Python 3.11 или новее. Сейчас откроется python.org:"
+        echo "скачайте «macOS 64-bit universal2 installer», установите и запустите этот файл ещё раз."
+        open "https://www.python.org/downloads/macos/"
+    fi
     read -r -p "Нажмите Enter, чтобы закрыть…" _
     exit 1
 fi
 echo "[1/4] Python: $PY ($("$PY" --version))"
 
-echo "[2/4] Устанавливаю зависимости (несколько минут, нужен интернет)…"
 "$PY" -m venv .venv
+if [ -n "$OFFDIR" ]; then                               # SibDoc3: закрытый контур
+    echo "[2/4] Устанавливаю зависимости без интернета (из $OFFDIR)…"
+    LINKS=()
+    while IFS= read -r d; do LINKS+=(--find-links "$d"); done < <(
+        find "$OFFDIR" -maxdepth 2 -name '*.whl' -print | while IFS= read -r f; do dirname "$f"; done | sort -u)
+    ./.venv/bin/python -m pip install -q --no-index "${LINKS[@]}" -r requirements.txt
+else
+echo "[2/4] Устанавливаю зависимости (несколько минут, нужен интернет)…"
 # Медленный или недоступный pypi.org (Китай, часть сетей в России) — ставим с зеркала.
 # Своё зеркало можно задать заранее: PIP_INDEX_URL=… bash install_mac.command
 if [ -z "$PIP_INDEX_URL" ]; then
@@ -43,10 +75,18 @@ fi
 export PIP_DEFAULT_TIMEOUT="${PIP_DEFAULT_TIMEOUT:-60}"
 ./.venv/bin/python -m pip install -q --timeout 60 --retries 10 --upgrade pip
 ./.venv/bin/python -m pip install -q --timeout 60 --retries 10 -r requirements.txt
+fi
 
 echo "[3/4] Распознавание сканов деклараций (Tesseract)"
 # Готовая сборка из conda-forge в папку .ocr (без Homebrew: на Mac с Intel он собирает tesseract часами).
-if ! bash "$APP_DIR/install_ocr_mac.command"; then
+if [ -n "$OFFDIR" ]; then                               # SibDoc3: закрытый контур
+    if [ -d offline/ocr ]; then
+        bash "$APP_DIR/install_ocr_mac.command" --offline offline/ocr \
+            || echo "      Tesseract из комплекта не установлен — всё остальное работает (docs/OFFLINE.md, «Сканы»)"
+    else
+        echo "      В комплекте нет offline/ocr — сканы без текстового слоя не распознаются (docs/OFFLINE.md, «Сканы»)"
+    fi
+elif ! bash "$APP_DIR/install_ocr_mac.command"; then
     echo "      Не получилось скачать Tesseract — всё остальное работает. Повторить: bash install_ocr_mac.command"
 fi
 

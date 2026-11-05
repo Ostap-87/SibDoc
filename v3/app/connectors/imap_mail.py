@@ -191,6 +191,7 @@ class ImapMailConnector(Connector):
             raise ConnectorError("security: ssl или starttls (без шифрования не подключаемся)")
         port = self.opt_int("port", 993 if security == "ssl" else 143)
         timeout = self.opt_int("timeout_sec", 30)
+        self._offline_check(host)                    # SibDoc3: закрытый контур
         try:
             if security == "ssl":
                 conn = imaplib.IMAP4_SSL(host, port, ssl_context=self._ssl_context(),

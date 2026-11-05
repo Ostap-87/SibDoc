@@ -31,6 +31,9 @@ from app.services.engine import RunResult
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
 _LATIN_CANDIDATES = [
+    # SibDoc3: закрытый контур — шрифт в комплекте программы (assets/fonts), без системных и сети
+    (os.path.join(PROJECT_ROOT, "assets", "fonts", "DejaVuSans.ttf"),
+     os.path.join(PROJECT_ROOT, "assets", "fonts", "DejaVuSans-Bold.ttf")),
     ("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"),
     ("/usr/share/fonts/dejavu/DejaVuSans.ttf", "/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf"),
     ("/usr/share/fonts/truetype/dejavu-sans-fonts/DejaVuSans.ttf", None),
@@ -41,6 +44,7 @@ _LATIN_CANDIDATES = [
 # только шрифты с контурами TrueType (glyf): CFF-шрифты (Noto CJK .otc/.ttc) reportlab не встраивает
 _CJK_CANDIDATES = [
     os.path.join(PROJECT_ROOT, "assets", "fonts", "cjk.ttf"),
+    os.path.join(PROJECT_ROOT, "assets", "fonts", "cjk.ttc"),      # SibDoc3: из офлайн-комплекта
     "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
     "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
     "/usr/share/fonts/wqy-zenhei/wqy-zenhei.ttc",

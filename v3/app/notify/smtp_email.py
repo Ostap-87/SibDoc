@@ -73,6 +73,13 @@ class EmailChannel(Channel):
                                    filename=os.path.basename(path))
         return msg
 
+    def _offline_check(self, host: str) -> None:
+        """SibDoc3: закрытый контур — почтовый сервер должен быть внутри контура."""
+        from app import netguard
+        msg = netguard.blocked_reason(host, f"почта «{self.label}»")
+        if msg:
+            raise NotifyError(msg)
+
     def send(self, event: str, text: str, files: list[str] | None = None) -> dict:
         host = str(self.opt("host", ""))
         if not host or not self.opt("from") or not self.opt_list("to"):
@@ -86,6 +93,7 @@ class EmailChannel(Channel):
             ok_files, notes = self._files(files, self.opt_int("max_attach_mb", 20) * 2**20)
         msg = self._message(event, text, ok_files)
         timeout = self.opt_int("timeout_sec", 30)
+        self._offline_check(host)                    # SibDoc3: закрытый контур
         if security == "ssl":
             smtp = smtplib.SMTP_SSL(host, port, context=self._ctx(), timeout=timeout)
         else:

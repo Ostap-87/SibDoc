@@ -184,13 +184,14 @@ class Channel:
             ok.append(f)
         return ok, notes
 
-    @staticmethod
-    def _requests():
+    def _requests(self):
         try:
             import requests
         except ImportError as exc:  # pragma: no cover
             raise NotifyError("пакет requests не установлен (pip install requests)") from exc
-        return requests
+        # SibDoc3: закрытый контур — каждый запрос канала проходит app.netguard.check()
+        from app import netguard
+        return netguard.guarded_requests(requests, NotifyError, f"уведомления «{self.label}»")
 
     def _verify(self):
         ca = self.opt("ca_bundle")

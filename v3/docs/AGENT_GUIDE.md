@@ -171,6 +171,14 @@ checks:
 | GET / POST | `/api/notifications`, `/{id}/test` | каналы уведомлений, тестовое сообщение |
 | GET | `/api/journal?day&q&kind&date_from&date_to`, `/kinds`, `/days`, `/export` | журнал, виды событий, календарь, CSV |
 | POST / GET / DELETE | `/api/scans/upload`, `/preview`, `/excel`, `/to-source` | сканы: OCR, предпросмотр, перенос в `ru_dt`/`cn_dec` |
+| GET | `/api/offline` | SibDoc3: закрытый контур — включён ли, разрешённые адреса (`app/netguard.py`) |
+| POST / GET | `/api/rates/import`, `/api/rates/template` | курсы из файлов (ЦБ РФ XML, CFETS, шаблон); шаблон Excel |
+| POST / GET | `/api/offline/update?apply=`, `/api/offline/updates` | обновление с носителя (admin): проверка / установка, история |
+
+Исходящие сетевые обращения (SibDoc3: закрытый контур): любой новый код, который ходит в сеть,
+вызывает `app.netguard.check(url_или_хост, "что это")` до соединения или берёт `requests` через
+`netguard.guarded_requests(...)` (у коннекторов и каналов уведомлений — `self._requests()`); список
+обращений — `docs/OFFLINE.md`, раздел 2.
 
 ## 6. Данные: словарь полей, загрузка, XML
 

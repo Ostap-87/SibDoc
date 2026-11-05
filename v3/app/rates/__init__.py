@@ -250,14 +250,44 @@ def _fetch(src: str, d: dt.date, settings: dict, *, user: str = "-", force: bool
     return rec
 
 
+# SibDoc3: закрытый контур — сайт источника вне разрешённых адресов (app/netguard.py)
+SOURCE_URL = {"cbr": providers.CBR_URL, "cfets": providers.CFETS_HISTORY_URL}
+FILE_HINT = ("загрузите файл курсов с носителя (ЦБ РФ XML_daily / XML_dynamic, CFETS, "
+             "шаблон Excel) в разделе «Курсы валют» → «Курсы из файла» или задайте ручной курс")
+
+
+def _net_blocked(src: str) -> str:
+    """Текст отказа закрытого контура для сайта источника; «» — сеть разрешена."""
+    from app import netguard
+    url = SOURCE_URL.get(src)
+    return netguard.blocked_reason(url, f"курсы «{_title(src)}»") if url else ""
+
+
+def _imported_before(src: str, d: dt.date, max_back: int) -> dict | None:
+    """Ближайший курс из загруженного файла раньше даты (в пределах max_back_days)."""
+    for back in range(1, max_back + 1):
+        rec = storage.cache_get(src, (d - dt.timedelta(days=back)).isoformat())
+        if rec is not None and rec.get("_imported"):
+            rec["_lookback"] = True
+            return rec
+    return None
+
+
 def _official_record(src: str, d: dt.date, settings: dict) -> dict:
     """Запись курсов cbr / cfets на дату: из кэша, иначе из сети (если не offline)."""
     ds = d.isoformat()
     rec = storage.cache_get(src, ds)
     if rec is None:
-        if settings.get("offline"):
+        blocked = "" if settings.get("offline") else _net_blocked(src)
+        if settings.get("offline") or blocked:
+            # SibDoc3: закрытый контур — курс из файла на ближайшую раньше дату
+            rec = _imported_before(src, d, settings["max_back_days"])
+        if rec is None and settings.get("offline"):
             raise RateUnavailable(f"офлайн-режим: курсов «{_title(src)}» на {ds} нет в кэше")
-        rec = _fetch(src, d, settings)
+        if rec is None and blocked:
+            raise RateUnavailable(f"закрытый контур: курсов «{_title(src)}» на {ds} нет — {FILE_HINT}")
+        if rec is None:
+            rec = _fetch(src, d, settings)
     eff = str(rec.get("effective_date") or ds)
     _check_gap(src, ds, eff, settings["max_back_days"])
     return rec
@@ -408,6 +438,9 @@ def _resolve(b: str, q: str, d: dt.date, src: str, side: str, settings: dict) ->
                         for c, v in _record_rates(rec).items()}
             if rec.get("_provisional"):
                 off_notes.append(f"курс на {ds} ещё не опубликован — взят последний от {eff}")
+            elif rec.get("_lookback"):              # SibDoc3: закрытый контур
+                off_notes.append(f"курс из файла от {eff}: на {ds} в загруженных файлах курса нет — "
+                                 f"проверьте, что он не менялся")
             elif eff != ds:
                 off_notes.append(f"курс от {eff} (на {ds} новый курс не устанавливался)")
         except RateUnavailable as exc:
@@ -497,6 +530,9 @@ def refresh(source: str, on, *, user: str = "-") -> dict:
         raise ValueError(f"источник «{source}» не скачивается: допустимо cbr, cfets, china_customs")
     if settings.get("offline"):
         raise RateUnavailable("включён офлайн-режим (config/rates.yaml → offline: true)")
+    blocked = _net_blocked(src)                  # SibDoc3: закрытый контур
+    if blocked:
+        raise RateUnavailable(f"{blocked} Курсы: {FILE_HINT}")
     _FAILS.pop((src, d.isoformat()), None)
     _DOWN.pop(src, None)
     rec = _fetch(src, d, settings, user=user, force=True)
@@ -543,6 +579,9 @@ def list_rates(on, source: str | None = None) -> list[dict]:
                 note.append(f"котировка источника: {quoted[c]}")
             if rec.get("_provisional"):
                 note.append("курс на дату ещё не опубликован")
+            if rec.get("_imported"):                # SibDoc3: закрытый контур
+                note.append(f"из файла {rec['_imported']}"
+                            + (" (ближайший раньше даты)" if rec.get("_lookback") else ""))
             rows.append(_row(source=src, base=c, quote=PIVOT[src], value=_round(v), date=ds,
                              effective_date=eff, note="; ".join(note)))
     max_back = settings["max_back_days"]

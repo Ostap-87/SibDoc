@@ -113,6 +113,8 @@
   <span class="sub" data-i18n="tagline"></span>
   <span class="spacer"></span>
   <span class="mode hidden" id="modeChip" data-i18n="proto_mode"></span>
+  <!-- SibDoc3: закрытый контур — индикатор (заполняет offline.js) -->
+  <span class="mode hidden" id="netChip"></span>
   <div class="mode hidden" id="userChip"><span id="userName"></span> <button class="btn sm ghost" onclick="logout()" data-i18n="logout"></button></div>
   <div class="lang">
     <button data-lang="ru" onclick="setLang('ru')">RU</button>
@@ -844,5 +846,7 @@ async function delUser(l){ await api('/api/users/' + encodeURIComponent(l), {met
 document.addEventListener('keydown', e => { if(e.key === 'Escape') closeModal(); });
 checkAuth();
 </script>
+<!-- SibDoc3: закрытый контур — индикатор, курсы из файла, обновление с носителя -->
+<script src="offline.js"></script>
 </body>
 </html>

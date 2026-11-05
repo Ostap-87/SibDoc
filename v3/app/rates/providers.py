@@ -103,6 +103,10 @@ def http_request(method: str, url: str, *, params: dict | None = None,
     except ImportError as exc:                 # pragma: no cover - зависит от окружения
         raise SourceDown("нет пакета requests (pip install requests)") from exc
     host = urlparse(url).netloc
+    from app import netguard                     # SibDoc3: закрытый контур
+    blocked = netguard.blocked_reason(url, "курсы валют")
+    if blocked:
+        raise SourceDown(blocked)
     last_exc: Exception | None = None
     for attempt in range(2):                   # один повтор при обрыве соединения
         try:

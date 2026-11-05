@@ -36,6 +36,10 @@ class StubConnector(Connector):
             return None
         return super()._gate()
 
+    def _offline_targets(self) -> list[str]:
+        # SibDoc3: закрытый контур — режим папки выгрузок в сеть не ходит
+        return [] if self._export_mode() else super()._offline_targets()
+
     def _folder(self) -> FolderConnector:
         cfg = dict(self.cfg)
         cfg["path"] = self.cfg.get("export_dir")

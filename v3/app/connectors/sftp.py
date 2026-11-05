@@ -95,6 +95,7 @@ class SftpConnector(Connector):
             raise ConnectorError("paramiko не установлен (pip install paramiko)") from exc
         host = self.opt("host", "")
         port = self.opt_int("port", 22)
+        self._offline_check(host)                    # SibDoc3: закрытый контур
         warnings: list[str] = []
         client = paramiko.SSHClient()
         fp = self.opt("host_key_sha256")

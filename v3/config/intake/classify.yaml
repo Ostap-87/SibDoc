@@ -1,0 +1,358 @@
+# ================================================================
+#  КЛАССИФИКАЦИЯ ДОКУМЕНТОВ ПАКЕТА (SibDoc 3, пакетная загрузка)
+#
+#  Тип каждого документа определяется по правилам — без интернета и без
+#  «чёрного ящика»: у каждого найденного признака есть вес, баллы
+#  складываются, побеждает тип с наибольшей суммой. В карточке документа
+#  видно, какие признаки сработали («ключевое слово «packing list» +8»).
+#
+#  Признаки типа:
+#   keywords  — слова и фразы RU / EN / ZH в тексте: {фраза: вес}.
+#               Регистр, лишние пробелы и пробелы между иероглифами
+#               (OCR пишет «海关 编号») не важны. «re:…» — регулярное
+#               выражение. Каждая фраза считается один раз.
+#   titles    — заголовки документа: ищутся в первых строках страницы /
+#               листа (settings.title_lines) и в имени листа Excel. Дают
+#               settings.title_weight баллов и по ним PDF из нескольких
+#               документов делится на части.
+#   not       — слова, которые говорят ПРОТИВ типа (вычитаются).
+#   headers   — поля единого словаря (config/fields.yaml), найденные в
+#               заголовке таблицы: {поле: вес}.
+#   xml_roots — корневой тег XML: даёт settings.xml_weight баллов.
+#   filename  — подсказки в имени файла: {фраза или re:…: вес}.
+#   formats   — формат файла: {pdf|image|excel|csv|docx|xml|txt|eml|html: вес}.
+#   id        — как найти номер документа (группа 1 регулярного выражения):
+#               если у двух страниц подряд разные номера — это разные документы.
+#
+#  Порядок типов важен только при равенстве баллов.
+#  Новый признак добавляется сюда — код менять не нужно. Тип, который
+#  выбран неверно, поправляется вручную (API: PUT …/documents/{id}/type),
+#  поля после этого извлекаются заново.
+# ================================================================
+
+settings:
+  min_score: 4            # меньше — тип не определён («Прочее», статус «требует проверки»)
+  strong_score: 14        # с этой суммы уверенность по «силе» признаков = 100 %
+  review_below: 0.6       # уверенность ниже — статус «требует проверки»
+  title_lines: 6          # сколько первых непустых строк страницы / листа считать «шапкой»
+  title_weight: 5         # вес найденного заголовка
+  xml_weight: 15          # вес совпавшего корневого тега XML
+  keyword_cap: 30         # не больше стольких баллов от ключевых слов на тип
+
+types:
+  ru_dt:
+    label: "ДТ РФ"
+    label_en: "RU customs declaration (DT)"
+    label_zh: "俄罗斯报关单"
+    titles: ['re:декларац\w*\s+на\s+товары', "ESADout"]
+    keywords:
+      're:декларац\w*\s+на\s+товары': 6
+      're:(?<!\d)\d{8}\s*/\s*\d{6}\s*/\s*[a-zа-я]?\d{7}(?!\d)': 5
+      "таможенная стоимость": 3
+      "статистическая стоимость": 3
+      "декларант": 3
+      're:таможенн\w+\s+процедур': 3
+      're:код\s+т[нh]\s*вэд': 2
+      "таможенный орган": 2
+      "графа": 1
+      "ESADout": 8
+    not:
+      "черновик": 8
+      "draft": 5
+      "草稿": 8
+    xml_roots: [ESADout_CU, ESADout]
+    headers: {decl_ru: 4, customs_value: 2, statistical_value: 2}
+    filename:
+      're:(^|[^a-zа-яё])(дт|gtd|esad)([^a-zа-яё]|$)': 3
+    formats: {xml: 1, pdf: 1, image: 1}
+    id: ['(?<!\d)(\d{8}\s*/\s*\d{6}\s*/\s*[A-ZА-Я]?\d{7})(?!\d)']
+
+  cn_dec:
+    label: "报关单 КНР"
+    label_en: "CN customs declaration (报关单)"
+    label_zh: "中国报关单"
+    titles: ["报关单", "出口货物报关单", "进口货物报关单", "DecMessage"]
+    keywords:
+      "报关单": 6
+      "出口货物报关单": 6
+      "进口货物报关单": 6
+      "中华人民共和国海关": 5
+      "海关编号": 5
+      "境内收发货人": 4
+      "监管方式": 3
+      "征免性质": 3
+      "申报日期": 2
+      "成交方式": 2
+      "运输方式": 1
+      're:(?<!\d)\d{18}(?!\d)': 3
+      "customs declaration": 2
+      "DecMessage": 8
+    not:
+      "草稿": 8
+      "черновик": 8
+      "draft": 5
+    xml_roots: [DecMessage, DecHead]
+    headers: {decl_cn: 4, decl_elements: 2}
+    filename:
+      "报关单": 4
+      're:(cn_?dec|customs.?dec)': 3
+    formats: {xml: 1, pdf: 1, image: 1}
+    id: ['(?:海关\s*编号|EntryId|declaration\s*no\.?)\s*[:：]?\s*(\d{18})', '(?<![\d/])(\d{18})(?![\d/])']
+
+  draft:
+    label: "Черновик декларации"
+    label_en: "Declaration draft"
+    label_zh: "报关单草稿"
+    titles: ["черновик", "draft", "草稿", 're:проект\w*\s+декларац']
+    keywords:
+      "черновик": 8
+      "草稿": 8
+      "draft": 5
+      're:проект\w*\s+(декларац|дт)': 6
+      "预录入": 4
+      "предварительн": 2
+    headers: {draft_num: 4, decl_ru: 1, decl_cn: 1, hs_code: 1, net_weight: 1, unit_price: 1}
+    filename:
+      're:(черновик|draft|草稿|预录入|проект)': 5
+    formats: {excel: 2, csv: 2}
+
+  invoice:
+    label: "Инвойс"
+    label_en: "Invoice"
+    label_zh: "发票"
+    titles: ["commercial invoice", "invoice", "инвойс", "proforma invoice", "发票", "商业发票"]
+    keywords:
+      "commercial invoice": 8
+      "инвойс": 6
+      "invoice": 5
+      "商业发票": 7
+      "发票": 5
+      "proforma": 3
+      're:invoice\s*(no\.?|№|number|#)': 4
+      're:terms\s+of\s+payment|условия\s+оплаты|付款方式': 2
+      're:total\s+amount|итого\s+к\s+оплате|сумма\s+к\s+оплате|总金额': 2
+    headers: {total_value: 2, unit_price: 1, qty: 1}
+    filename:
+      're:(invoice|инвойс|发票|(^|[^a-z])inv[_\-\s\d])': 4
+    id: ['(?:invoice|инвойс|发票)\s*(?:no\.?|№|number|#|号码?)?\s*[:：]?\s*([A-ZА-Я0-9][A-ZА-Я0-9\-/\.]{2,30})']
+
+  packing:
+    label: "Упаковочный лист"
+    label_en: "Packing list"
+    label_zh: "装箱单"
+    titles: ["packing list", "упаковочный лист", "装箱单"]
+    keywords:
+      "packing list": 8
+      "упаковочный лист": 8
+      "装箱单": 8
+      're:кол-?\s*во\s+мест|количество\s+мест': 3
+      "number of packages": 3
+      "件数": 3
+      "箱数": 3
+      're:\bpallets?\b|паллет|托盘': 2
+      're:dimensions|габарит|measurement|体积': 2
+      "gross weight": 1
+      "вес брутто": 1
+      "毛重": 1
+    headers: {gross_weight: 2, net_weight: 1}
+    filename:
+      're:(packing|упаков|装箱|(^|[^a-z])pl[_\-\s\d])': 4
+    id: ['(?:packing\s+list|упаковочный\s+лист|装箱单)\s*(?:no\.?|№|#|号)?\s*[:：]?\s*([A-ZА-Я0-9][A-ZА-Я0-9\-/\.]{2,30})']
+
+  transport:
+    label: "Транспортный документ"
+    label_en: "Transport document (CMR, B/L, SMGS, AWB)"
+    label_zh: "运输单据"
+    titles: ['re:\bCMR\b', "международная товарно-транспортная накладная", "bill of lading", "коносамент",
+             "提单", "СМГС", "накладная смгс", "air waybill", "运单"]
+    keywords:
+      "международная товарно-транспортная накладная": 9
+      "bill of lading": 8
+      "коносамент": 8
+      "накладная смгс": 9
+      "СМГС": 7
+      "air waybill": 8
+      "海运提单": 8
+      "提单": 7
+      "铁路运单": 7
+      "运单": 5
+      're:\bCMR\b': 6
+      're:\bAWB\b': 5
+      "перевозчик": 3
+      "carrier": 2
+      "承运人": 3
+      "грузоотправитель": 2
+      "shipper": 2
+      "port of loading": 3
+      "порт погрузки": 3
+      "装货港": 3
+      "port of discharge": 3
+      "станция отправления": 4
+      "станция назначения": 4
+      're:тягач|прицеп|госномер|vehicle\s+(no|reg)': 2
+      "vessel": 2
+    filename:
+      're:(cmr|bill.?of.?lading|коносамент|смгс|smgs|awb|waybill|накладн|提单|运单|(^|[^a-z])b[_/]?l([^a-z]|$))': 4
+    id: ['(?:CMR|накладная|коносамент|bill\s+of\s+lading|B/L|AWB|СМГС|提单号?|运单号?)\s*(?:no\.?|№|#)?\s*[:：]?\s*([A-ZА-Я0-9][A-ZА-Я0-9\-/\.]{2,30})']
+
+  conformity:
+    label: "Сертификат"
+    label_en: "Certificate (conformity, origin, quality)"
+    label_zh: "证书"
+    titles: ["сертификат", "certificate", "декларация о соответствии", "паспорт качества", "证书", "合格证"]
+    keywords:
+      "сертификат соответствия": 9
+      "декларация о соответствии": 9
+      "certificate of conformity": 9
+      're:сертификат\w*\s+(о\s+)?происхожден': 8
+      "certificate of origin": 8
+      "原产地证书": 8
+      "certificate of quality": 7
+      "паспорт качества": 7
+      "сертификат качества": 7
+      "质量证明": 5
+      "合格证": 6
+      "检验检疫": 4
+      "орган по сертификации": 6
+      "certification body": 5
+      're:соответству\w*\s+требовани': 4
+      're:\bТР\s*ТС\b|\bТР\s*ЕАЭС\b': 4
+      're:\bEAC\b|ЕАЭС': 2
+      "форма СТ-1": 6
+      "заявитель": 2
+      "срок действия": 2
+      "valid until": 2
+    filename:
+      're:(сертиф|certif|соответств|паспорт.?качества|证书|合格证|ст-?1)': 4
+    id: ['(?:сертификат|certificate|декларация\s+о\s+соответствии|证书)\w*\s*(?:no\.?|№|#|号)?\s*[:：]?\s*([A-ZА-Я0-9][A-ZА-Я0-9\-/\.]{3,40})']
+
+  contract:
+    label: "Контракт"
+    label_en: "Contract / agreement"
+    label_zh: "合同"
+    titles: ['re:^\s*(внешнеторговый\s+)?контракт', 're:^\s*(sales\s+|purchase\s+)?contract', 're:^\s*договор',
+             "дополнительное соглашение", "спецификация", "合同", "补充协议", "supplementary agreement"]
+    keywords:
+      "предмет контракта": 7
+      "предмет договора": 7
+      "subject of the contract": 7
+      "дополнительное соглашение": 7
+      "supplementary agreement": 6
+      "补充协议": 7
+      "买卖合同": 7
+      "销售合同": 7
+      "购销合同": 7
+      're:именуем\w*': 5
+      "hereinafter referred to as": 6
+      "реквизиты сторон": 5
+      "подписи сторон": 5
+      "force majeure": 4
+      "форс-мажор": 4
+      "不可抗力": 4
+      "арбитраж": 3
+      "arbitration": 3
+      "仲裁": 3
+      "甲方": 3
+      "乙方": 3
+      "the parties": 3
+      're:контракт\s*№': 3
+      're:contract\s*(no\.?|№)': 3
+      "спецификация": 3
+      "合同": 2
+    filename:
+      're:(контракт|договор|contract|合同|соглаш|agreement|协议|спецификац)': 4
+    id: ['(?:контракт|договор|contract|合同号?)\s*(?:no\.?|№|#)?\s*[:：]?\s*([A-ZА-Я0-9][A-ZА-Я0-9\-/\.]{2,30})']
+
+  system_export:
+    label: "Выгрузка SAP / 1С"
+    label_en: "System export (SAP / 1C / ERP)"
+    label_zh: "系统导出（SAP / 1C）"
+    keywords:
+      're:\bSAP\b': 5
+      're:\b1[CС]\b': 4
+      "выгрузка": 3
+      "purchase order": 4
+      "заказ на поставку": 4
+      "номенклатура": 3
+      "采购订单": 5
+      "物料": 3
+      "FineBI": 4
+      "kingdee": 4
+      "金蝶": 4
+      "yonyou": 4
+      "用友": 4
+    headers: {material: 4, sap_price: 3, sap_currency: 2, shipment_date: 2, main_contract: 2, add_contract: 2,
+              storage_location: 2, container: 1}
+    filename:
+      're:(sap|(^|[^a-z0-9])1[cс]([^a-z0-9]|$)|purchase|выгрузк|erp|kingdee|yonyou|finebi|wide)': 4
+    formats: {excel: 2, csv: 2}
+
+  bank:
+    label: "Выписка банка"
+    label_en: "Bank statement"
+    label_zh: "银行对账单"
+    titles: ["выписка", "bank statement", "account statement", "statement of account", "银行对账单", "对账单"]
+    keywords:
+      're:выписк\w*\s+(по|из)\s+(лицевого\s+|валютного\s+|транзитного\s+)?сч[её]т': 8
+      "банковская выписка": 8
+      "bank statement": 8
+      "account statement": 7
+      "statement of account": 7
+      "银行对账单": 8
+      "对账单": 5
+      "выписка": 4
+      "назначение платежа": 4
+      "входящий остаток": 4
+      "исходящий остаток": 4
+      "opening balance": 3
+      "closing balance": 3
+      're:\bБИК\b': 4
+      're:\bSWIFT\b': 3
+      're:\bIBAN\b': 2
+      "借方": 3
+      "贷方": 3
+      "дебет": 2
+      "кредит": 2
+      "debit": 2
+      "credit": 2
+    filename:
+      're:(выписк|statement|bank|банк|对账单|银行)': 4
+
+  reference:
+    label: "Справочник"
+    label_en: "Reference table"
+    label_zh: "参考表"
+    titles: ["справочник", "reference", "参考表", "对照表", "классификатор", "master data"]
+    keywords:
+      "справочник": 7
+      "参考表": 6
+      "对照表": 5
+      "классификатор": 5
+      "мастер-данные": 5
+      "master data": 5
+      "reference": 3
+      're:утвержд[её]нн': 2
+      "short name": 2
+    headers: {hs_code: 2, model: 2, decl_elements: 2, material: 1}
+    filename:
+      're:(справочн|reference|(^|[^a-z])ref[_\-\s]|参考|对照|классификатор|master)': 5
+    formats: {excel: 2, csv: 2}
+
+  other:
+    label: "Прочее (письмо, записка)"
+    label_en: "Other (letter, note)"
+    label_zh: "其他（信函、说明）"
+    keywords:
+      "во вложении": 4
+      "добрый день": 3
+      "с уважением": 3
+      "best regards": 3
+      "kind regards": 3
+      "please find attached": 4
+      "附件": 3
+      "此致": 3
+      "сопроводительное письмо": 5
+      "направляем": 2
+      "пакет документов": 2
+      're:^(from|to|subject|от|кому|тема)\s*:': 2
+    formats: {eml: 6, txt: 1}
