@@ -1,0 +1,21 @@
+# ================================================================
+# Куда вставлять извлечённые из сканов данные в Excel для
+# предварительного просмотра: лист + колонки шаблона.
+# Меняется без кода: добавьте/переименуйте колонки под ваш шаблон.
+# ================================================================
+target:
+  sheet: "SCAN_PREVIEW"
+  header_row: 1
+  columns:
+    decl_num:       "CD number"
+    container_num:  "Container number"
+    contract:       "Contract"
+    incoterms:      "Incoterms"
+    hs_code:        "HS code"
+    unit_price:     "Unit price"
+    net_weight:     "Net weight"
+    declared_model: "Declared model"
+  # служебные колонки (всегда в конце)
+  service_columns:
+    file:   "Source file"
+    status: "Extract status"

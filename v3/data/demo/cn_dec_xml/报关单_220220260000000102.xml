@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<DecMessage xmlns="http://www.chinaport.gov.cn/dec" Version="3.1">
+  <DecHead>
+    <SeqNo>I2026000000102</SeqNo>
+    <EntryId>220220260000000102</EntryId>
+    <IEPort>2218</IEPort>
+    <ContrNo>ДЕМО.1001-02А</ContrNo>
+    <TransMode>CPT</TransMode>
+    <NetWt>23940</NetWt>
+    <GrossWt>24299.1</GrossWt>
+    <DDate>20260923</DDate>
+    <ConsigneeCname>示例进口有限公司</ConsigneeCname>
+    <ConsignorEname>OOO PRIMER EXPORT (fictional)</ConsignorEname>
+    <BillNo>DEMOBL0102</BillNo>
+  </DecHead>
+  <DecLists>
+    <DecList>
+      <GNo>1</GNo>
+      <CodeTS>4002311000</CodeTS>
+      <GName>丁基橡胶</GName>
+      <GModel>4|3|块状|非充油|20260801|无品牌|Butyl rubber IIR-1675N</GModel>
+      <GQty>23940</GQty>
+      <GUnit>035</GUnit>
+      <DeclPrice>9.176</DeclPrice>
+      <DeclTotal>219673.44</DeclTotal>
+      <TradeCurr>142</TradeCurr>
+      <FirstQty>23940</FirstQty>
+      <FirstUnit>035</FirstUnit>
+      <OriginCountry>RUS</OriginCountry>
+    </DecList>
+  </DecLists>
+  <DecContainers><Container><ContainerId>DEMU0001033</ContainerId><ContainerMd>22G1</ContainerMd><GoodsNo>1</GoodsNo></Container></DecContainers>
+</DecMessage>

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<DecMessage xmlns="http://www.chinaport.gov.cn/dec" Version="3.1">
+  <DecHead>
+    <SeqNo>I2026000000104</SeqNo>
+    <EntryId>220220260000000104</EntryId>
+    <IEPort>2218</IEPort>
+    <ContrNo>ДЕМО.1002-02А</ContrNo>
+    <TransMode>CPT</TransMode>
+    <NetWt>47880</NetWt>
+    <GrossWt>48598.2</GrossWt>
+    <DDate>20260925</DDate>
+    <ConsigneeCname>示例进口有限公司</ConsigneeCname>
+    <ConsignorEname>OOO PRIMER EXPORT (fictional)</ConsignorEname>
+    <BillNo>DEMOBL0104</BillNo>
+  </DecHead>
+  <DecLists>
+    <DecList>
+      <GNo>1</GNo>
+      <CodeTS>4002391000</CodeTS>
+      <GName>溴化丁基橡胶</GName>
+      <GModel>4|3|块状|非充油|20260801|无品牌|Bromobutyl rubber BIIR-232</GModel>
+      <GQty>47880</GQty>
+      <GUnit>035</GUnit>
+      <DeclPrice>10.157</DeclPrice>
+      <DeclTotal>486317.16</DeclTotal>
+      <TradeCurr>142</TradeCurr>
+      <FirstQty>47880</FirstQty>
+      <FirstUnit>035</FirstUnit>
+      <OriginCountry>RUS</OriginCountry>
+    </DecList>
+  </DecLists>
+  <DecContainers><Container><ContainerId>DEMU0001054</ContainerId><ContainerMd>22G1</ContainerMd><GoodsNo>1</GoodsNo></Container><Container><ContainerId>DEMU0001060</ContainerId><ContainerMd>22G1</ContainerMd><GoodsNo>1</GoodsNo></Container></DecContainers>
+</DecMessage>

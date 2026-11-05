@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<DecMessage xmlns="http://www.chinaport.gov.cn/dec" Version="3.1">
+  <DecHead>
+    <SeqNo>I2026000000105</SeqNo>
+    <EntryId>220220260000000105</EntryId>
+    <IEPort>2218</IEPort>
+    <ContrNo>ДЕМО.2002-05В</ContrNo>
+    <TransMode>CPT</TransMode>
+    <NetWt>22680</NetWt>
+    <GrossWt>23020.2</GrossWt>
+    <DDate>20260926</DDate>
+    <ConsigneeCname>示例进口有限公司</ConsigneeCname>
+    <ConsignorEname>OOO PRIMER EXPORT (fictional)</ConsignorEname>
+    <BillNo>DEMOBL0105</BillNo>
+  </DecHead>
+  <DecLists>
+    <DecList>
+      <GNo>1</GNo>
+      <CodeTS>4002191300</CodeTS>
+      <GName>SBS热塑性弹性体</GName>
+      <GModel>4|3|块状|非充油|20260801|无品牌|SBS L7322</GModel>
+      <GQty>22680</GQty>
+      <GUnit>035</GUnit>
+      <DeclPrice>9.661</DeclPrice>
+      <DeclTotal>219111.48</DeclTotal>
+      <TradeCurr>142</TradeCurr>
+      <FirstQty>22680</FirstQty>
+      <FirstUnit>035</FirstUnit>
+      <OriginCountry>RUS</OriginCountry>
+    </DecList>
+  </DecLists>
+  <DecContainers><Container><ContainerId>DEMU0001075</ContainerId><ContainerMd>22G1</ContainerMd><GoodsNo>1</GoodsNo></Container></DecContainers>
+</DecMessage>
