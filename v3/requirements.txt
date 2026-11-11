@@ -11,9 +11,10 @@ requests>=2.31       # курсы ЦБ РФ / CFETS, REST, SAP OData, 1С, WeCom
 # --- сканы (OCR) ---
 pytesseract>=0.3.10
 Pillow>=10.0
-PyMuPDF>=1.24
+PyMuPDF==1.24.14      # версия, на которой прогнаны тесты; 2.x меняет API и собирается из исходников
 # --- коннекторы ---
 paramiko>=3.4        # SFTP
+cryptography>=42,<49  # колёса для всех платформ; 50.x собирается из исходников
 SQLAlchemy>=2.0      # БД (драйвер конкретной БД ставится отдельно: pyodbc, psycopg и т. п.)
-# --- настольный режим ---
-pywebview
+# настольное окно (pywebview) — необязательно: см. requirements-desktop.txt,
+# без него SibDoc откроется в браузере (sibdoc_gui.py сам это умеет)

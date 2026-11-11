@@ -16,5 +16,7 @@ if %errorlevel%==0 (
 
 if exist .venv\Scripts\activate.bat call .venv\Scripts\activate.bat
 echo Start API+UI na http://localhost:8000  (Ctrl+C - ostanovit)
+REM SibDoc3: otkryvaem brauzer, kogda server uzhe otvechaet
+start "" /b cmd /c "timeout /t 4 >nul & start "" http://localhost:8000"
 uvicorn app.server:app --host 0.0.0.0 --port 8000
 pause

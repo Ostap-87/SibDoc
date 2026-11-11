@@ -201,8 +201,8 @@ def ocr_image(img) -> tuple[list, float]:
     Движки: Tesseract, если установлен; иначе системный Vision (macOS) — без внешних бинарников.
     """
     if not ocr_reader.tesseract_available():
-        from app.services import ocr_vision
-        pairs = ocr_vision.image_to_lines(img)
+        from app.services import ocr_vision, ocr_windows
+        pairs = ocr_vision.image_to_lines(img) if ocr_vision.available() else ocr_windows.image_to_lines(img)
         lines = [Line(t, c) for t, c in pairs if t and t.strip()]
         mean = round(sum(c for _, c in pairs) / len(pairs), 3) if pairs else 0.0
         return lines, mean

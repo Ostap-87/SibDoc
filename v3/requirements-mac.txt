@@ -1,0 +1,4 @@
+# macOS: системный OCR (Vision) — распознавание сканов без Tesseract.
+# Ставится на Mac; на других системах не нужен (там Tesseract или Windows OCR).
+pyobjc-framework-Vision>=10
+pyobjc-framework-Quartz>=10

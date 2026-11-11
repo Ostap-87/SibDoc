@@ -62,7 +62,7 @@ EXTRAS = {
     "windows": ["colorama", "pythonnet", "clr_loader", "cffi", "pycparser"],
     "mac": ["pyobjc-core", "pyobjc-framework-Cocoa", "pyobjc-framework-Quartz",
             "pyobjc-framework-WebKit", "pyobjc-framework-Security",
-            "pyobjc-framework-UniformTypeIdentifiers"],
+            "pyobjc-framework-UniformTypeIdentifiers", "pyobjc-framework-Vision"],
     "linux": [],
 }
 # пакеты без готовых wheel на PyPI (только исходники, чистый Python): собираются здесь
@@ -82,6 +82,8 @@ CONDA_CHANNEL = "https://conda.anaconda.org/conda-forge"
 # Китайский шрифт для PDF: ищем на машине сборки комплекта (Linux, macOS, Windows).
 # В git шрифт не хранится (v3/.gitignore → assets/fonts/cjk.*): он попадает в офлайн-комплект здесь.
 CJK_FONTS = [
+    # свой шрифт проекта (Noto Sans SC, лицензия OFL) — в приоритете: его можно распространять
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "assets", "fonts", "cjk.ttf"),
     "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
     "/usr/share/fonts/wqy-zenhei/wqy-zenhei.ttc",
     "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
@@ -91,7 +93,6 @@ CJK_FONTS = [
     "/Library/Fonts/Arial Unicode.ttf",
     "C:/Windows/Fonts/msyh.ttc",                                  # Windows
     "C:/Windows/Fonts/simsun.ttc",
-    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "assets", "fonts", "cjk.ttf"),
 ]
 IMAGE = "postcontrol-suite:latest"
 EXCLUDE_DIRS = {".git", ".venv", "storage", "__pycache__", "dist", "wheelhouse", "vendor", ".ocr",
@@ -219,7 +220,7 @@ def copy_app(plan: Plan, src: str, dest: str) -> int:
     for f in files:
         to = os.path.join(dest, *f.split("/"))
         os.makedirs(os.path.dirname(to), exist_ok=True)
-        shutil.copy2(os.path.join(src, *f.split("/")), to)
+        shutil.copy(os.path.join(src, *f.split("/")), to)   # copy: copystat падает в песочнице (chflags)
     return len(files)
 
 
@@ -230,12 +231,16 @@ def build_wheelhouse(plan: Plan, src: str, wh: str, platforms: list[str], python
     dirs = []
     cross = [p for p in platforms if p != "native"]
     any_dir = os.path.join(wh, "any")
+    if not plan.dry:
+        os.makedirs(any_dir, exist_ok=True)
     if cross:
         plan.run(pip + ["wheel", "--no-deps", "-w", any_dir] + SDIST_ONLY)
     for p in platforms:
         if p == "native":
             name = f"{native_name()}-py{sys.version_info.major}.{sys.version_info.minor}"
             out = os.path.join(wh, name)
+            if not plan.dry:
+                os.makedirs(out, exist_ok=True)      # pip не всегда создаёт папку сам (путь с пробелами)
             plan.run(pip + ["wheel", "-r", req, "-w", out])
             dirs.append(name)
             continue
@@ -243,6 +248,8 @@ def build_wheelhouse(plan: Plan, src: str, wh: str, platforms: list[str], python
         for py in pythons:
             name = f"{p}-py{py}"
             out = os.path.join(wh, name)
+            if not plan.dry:
+                os.makedirs(out, exist_ok=True)
             base = pip + ["download", "--only-binary=:all:", "--implementation", "cp",
                           "--python-version", py, "--find-links", any_dir, "-d", out]
             for t in tags:
@@ -263,7 +270,7 @@ def add_cjk_font(plan: Plan, dest_app: str, font: str | None) -> str:
             plan.note(f"китайский шрифт для PDF: {path} -> {_rel(to)}")
             if not plan.dry:
                 os.makedirs(os.path.dirname(to), exist_ok=True)
-                shutil.copy2(path, to)
+                shutil.copy(path, to)      # copy: copystat падает в песочнице (chflags)
             return os.path.basename(path)
     plan.warn("китайский шрифт (WenQuanYi Zen Hei) на этом компьютере не найден — PDF возьмёт "
               "системный шрифт в контуре (Windows/Mac) или встроенный STSong-Light")
@@ -369,7 +376,11 @@ README = """SibDoc 3 — комплект для закрытого контур
      docker load -i offline/docker/postcontrol-suite.tar.gz
      bash install.sh --offline wheelhouse   (найдёт загруженный образ и запустит контейнер)
 
-3. Распознавание сканов (Tesseract), если в комплекте есть offline/ocr:
+3. Распознавание сканов (OCR) — работает без Tesseract:
+     Mac:      системный Vision (ставится из комплекта: requirements-mac.txt) — ru/en/zh
+     Windows:  системный движок Windows 10/11 (пакет winsdk) — язык зависит от языковых пакетов
+     Linux:    нужен Tesseract (если в комплекте есть offline/ocr — он там; иначе apt install tesseract-ocr)
+   Если в комплекте есть offline/ocr — можно поставить и Tesseract:
      Windows:  запустите offline/ocr/windows/tesseract-ocr-w64-setup-*.exe (путь по умолчанию)
      Mac/Linux: bash install_ocr_mac.command --offline offline/ocr/<платформа>
    Языки rus / eng / chi_sim уже лежат в папке tessdata программы.
@@ -471,7 +482,14 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--format", choices=("zip", "tar.gz", "none"), default="zip", help="архив комплекта")
     ap.add_argument("--dry-run", action="store_true", help="ничего не скачивать и не создавать — показать план")
     ap.add_argument("--check", metavar="ПАПКА", help="проверить контрольные суммы готового комплекта")
+    ap.add_argument("--sums", metavar="ПАПКА",
+                    help="пересчитать SHA256SUMS готового комплекта (после обрезки платформ или правок)")
     a = ap.parse_args(argv)
+
+    if a.sums:
+        n = write_sums(os.path.abspath(a.sums))
+        print(f"Контрольные суммы пересчитаны: {n} файлов — {a.sums}/SHA256SUMS")
+        return 0
 
     if a.check:
         n, errors = check_sums(a.check)

@@ -60,6 +60,15 @@ if [ -n "$OFFDIR" ]; then                               # SibDoc3: закрыт�
     while IFS= read -r d; do LINKS+=(--find-links "$d"); done < <(
         find "$OFFDIR" -maxdepth 2 -name '*.whl' -print | while IFS= read -r f; do dirname "$f"; done | sort -u)
     ./.venv/bin/python -m pip install -q --no-index "${LINKS[@]}" -r requirements.txt
+    # окно приложения (pywebview) — если положили в комплект; без него откроется браузер
+    if [ -f requirements-mac.txt ]; then
+        ./.venv/bin/python -m pip install -q --no-index "${LINKS[@]}" -r requirements-mac.txt \
+            || echo "      Системный OCR (Vision) не установлен — сканы будут через Tesseract, если он есть"
+    fi
+    if [ -f requirements-desktop.txt ]; then
+        ./.venv/bin/python -m pip install -q --no-index "${LINKS[@]}" -r requirements-desktop.txt \
+            || echo "      Окно приложения не установлено — SibDoc откроется в браузере"
+    fi
 else
 echo "[2/4] Устанавливаю зависимости (несколько минут, нужен интернет)…"
 # Медленный или недоступный pypi.org (Китай, часть сетей в России) — ставим с зеркала.
@@ -75,6 +84,14 @@ fi
 export PIP_DEFAULT_TIMEOUT="${PIP_DEFAULT_TIMEOUT:-60}"
 ./.venv/bin/python -m pip install -q --timeout 60 --retries 10 --upgrade pip
 ./.venv/bin/python -m pip install -q --timeout 60 --retries 10 -r requirements.txt
+if [ -f requirements-mac.txt ]; then
+    ./.venv/bin/python -m pip install -q --timeout 60 --retries 10 -r requirements-mac.txt \
+        || echo "      Системный OCR (Vision) не установлен — сканы будут через Tesseract, если он есть"
+fi
+if [ -f requirements-desktop.txt ]; then
+    ./.venv/bin/python -m pip install -q --timeout 60 --retries 10 -r requirements-desktop.txt \
+        || echo "      Окно приложения не установлено — SibDoc откроется в браузере"
+fi
 fi
 
 echo "[3/4] Распознавание сканов деклараций (Tesseract)"
@@ -119,8 +136,9 @@ chmod +x "$APP/Contents/MacOS/SibDoc3"
 cp "$APP_DIR/assets/SibDoc.icns" "$APP/Contents/Resources/SibDoc.icns"
 touch "$APP"
 /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$APP" 2>/dev/null || true
-# значок на рабочем столе (ссылка на приложение)
-ln -sfn "$APP" "$HOME/Desktop/SibDoc 3"
+# значок на рабочем столе (ссылка на приложение); папки «Рабочий стол» может не быть — создаём
+mkdir -p "$HOME/Desktop" 2>/dev/null || true
+[ -d "$HOME/Desktop" ] && ln -sfn "$APP" "$HOME/Desktop/SibDoc 3" 2>/dev/null || true
 # если SibDoc 3 уже открыт — закрываем, чтобы запустился обновлённый (старый SibDoc не трогаем)
 pkill -f "$APP_DIR/sibdoc_gui.py" 2>/dev/null || true
 

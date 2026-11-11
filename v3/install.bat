@@ -40,13 +40,36 @@ goto DOCKER_RUN
 
 :PYTHON
 echo Stavlyu lokalno na Python...
+set "PY="
 where py >nul 2>nul
-if %errorlevel%==0 (set PY=py -3) else (set PY=python)
+if %errorlevel%==0 set PY=py -3
+if not defined PY (
+  where python >nul 2>nul
+  if %errorlevel%==0 set PY=python
+)
+
+REM SibDoc3: нет Python — stavim ego iz komplekta (offline\python\python-*-amd64.exe)
+if not defined PY (
+  set "PYEXE="
+  for %%F in (offline\python\python-*-amd64.exe) do set "PYEXE=%%~fF"
+  if defined PYEXE (
+    echo Python v sisteme ne nayden - stavlyu iz komplekta...
+    "%PYEXE%" /quiet InstallAllUsers=0 PrependPath=0 Include_test=0 Include_launcher=1 ^
+      SimpleInstall=1 SimpleInstallDescription="SibDoc 3" TargetDir="%cd%\pyruntime"
+    if exist "%cd%\pyruntime\python.exe" set "PY=%cd%\pyruntime\python.exe"
+  )
+)
+
+if not defined PY (
+  echo OSHIBKA: net Python 3.10+. V komplekte - offline\python\python-*-amd64.exe
+  echo Ustanovite Python 3.12 s https://www.python.org/downloads/windows/ i zapustite install.bat snova.
+  goto END
+)
 
 echo [1/3] Sozdayu virtualnoe okruzhenie...
 %PY% -m venv .venv
 if errorlevel 1 (
-  echo OSHIBKA: net Python 3.10+. V komplekte - offline\python\python-*-amd64.exe
+  echo OSHIBKA: ne poluchilos sozdat .venv. Ustanovite Python 3.12 i zapustite install.bat snova.
   goto END
 )
 call .venv\Scripts\activate.bat
@@ -59,6 +82,10 @@ if "%OFFDIR%"=="" (
   set "LINKS=--find-links "%OFFDIR%""
   for /d %%D in ("%OFFDIR%\*") do set "LINKS=!LINKS! --find-links "%%~fD""
   pip install -q --no-index !LINKS! -r requirements.txt
+  if exist requirements-desktop.txt (
+    pip install -q --no-index !LINKS! -r requirements-desktop.txt
+    if errorlevel 1 echo  Okno prilozheniya ne ustanovleno - SibDoc otkroetsya v brauzere
+  )
 )
 
 echo [3/3] Gotovo.

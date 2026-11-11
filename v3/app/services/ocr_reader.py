@@ -30,7 +30,7 @@ import subprocess
 import pytesseract
 from PIL import Image, ImageOps, ImageSequence
 
-from app.services import ocr_vision
+from app.services import ocr_vision, ocr_windows
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 LOCAL_TESSDATA = os.path.join(PROJECT_ROOT, "tessdata")
@@ -81,6 +81,8 @@ def available_languages() -> list[str]:
     """Какие языки реально доступны OCR (для отображения в UI/API)."""
     if not tesseract_available() and ocr_vision.available():
         return ocr_vision.languages()
+    if not tesseract_available() and ocr_windows.available():
+        return ocr_windows.languages()
     cfg = ""
     td = _tessdata_dir()
     if td:
@@ -99,6 +101,9 @@ def _ocr_image(img: Image.Image) -> str:
     if not tesseract_available() and ocr_vision.available():
         # macOS: системный Vision, без установки внешних бинарников
         return ocr_vision.image_to_string(img)
+    if not tesseract_available() and ocr_windows.available():
+        # Windows 10/11: встроенный движок Windows.Media.Ocr
+        return "\n".join(t for t, _ in ocr_windows.image_to_lines(img))
     _use_tesseract()                                   # путь к tesseract и OMP_THREAD_LIMIT=1
     gray = ImageOps.grayscale(img)
     gray = ImageOps.autocontrast(gray, cutoff=1)
@@ -141,11 +146,13 @@ def tesseract_available() -> bool:
 
 
 def ocr_engine() -> str | None:
-    """Какой движок распознавания доступен: tesseract | vision | None."""
+    """Какой движок распознавания доступен: tesseract | vision (macOS) | windows | None."""
     if tesseract_available():
         return "tesseract"
     if ocr_vision.available():
         return "vision"
+    if ocr_windows.available():
+        return "windows"
     return None
 
 
@@ -161,7 +168,7 @@ def read_scan(fileobj, filename: str) -> dict:
     need_ocr = any(not isinstance(p, str) for p in pages)
     if need_ocr and not ocr_available():
         raise RuntimeError(
-            "OCR не найден / OCR not found / 未找到OCR: нет ни Tesseract, ни системного Vision. "
+            "OCR не найден / OCR not found / 未找到OCR: нет ни Tesseract, ни системного движка (Vision / Windows OCR). "
             "Mac — bash install_ocr_mac.command (или pyobjc-framework-Vision для системного OCR), "
             "Windows/Linux — Tesseract из офлайн-комплекта (README.md §OCR). "
             "Остальные функции работают без него.")
