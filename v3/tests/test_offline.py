@@ -694,11 +694,11 @@ def test_install_sh_offline_uses_only_wheelhouse(tmp_path):
     env = {**os.environ, "SIBDOC_NO_DOCKER": "1", "PIP_INDEX_URL": "http://127.0.0.1:9/simple",
            "PIP_CONFIG_FILE": os.devnull}
     r = subprocess.run(["bash", "install.sh", "--offline", "wheelhouse"], cwd=app, env=env,
-                       capture_output=True, text=True, timeout=300)
+                       capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=300)
     assert r.returncode == 0, r.stdout + r.stderr
     assert "без интернета" in r.stdout
     py = app / ".venv" / "bin" / "python"
     assert subprocess.run([str(py), "-c", "import sibdoc_fake; assert sibdoc_fake.OK"]).returncode == 0
     r = subprocess.run(["bash", "install.sh", "--offline", "nowhere"], cwd=app, env=env,
-                       capture_output=True, text=True, timeout=60)
+                       capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60)
     assert r.returncode == 1 and "нет библиотек *.whl" in r.stdout

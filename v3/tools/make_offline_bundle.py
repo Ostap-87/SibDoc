@@ -79,8 +79,20 @@ TESSERACT_WIN_URL = ("https://github.com/UB-Mannheim/tesseract/releases/download
                      "v5.4.0.20240606/tesseract-ocr-w64-setup-5.4.0.20240606.exe")
 MICROMAMBA_URL = "https://github.com/mamba-org/micromamba-releases/releases/latest/download/micromamba-{plat}"
 CONDA_CHANNEL = "https://conda.anaconda.org/conda-forge"
-CJK_FONTS = ["/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc", "/usr/share/fonts/wqy-zenhei/wqy-zenhei.ttc",
-             "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc"]
+# Китайский шрифт для PDF: ищем на машине сборки комплекта (Linux, macOS, Windows).
+# В git шрифт не хранится (v3/.gitignore → assets/fonts/cjk.*): он попадает в офлайн-комплект здесь.
+CJK_FONTS = [
+    "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
+    "/usr/share/fonts/wqy-zenhei/wqy-zenhei.ttc",
+    "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
+    "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+    "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+    "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",       # macOS
+    "/Library/Fonts/Arial Unicode.ttf",
+    "C:/Windows/Fonts/msyh.ttc",                                  # Windows
+    "C:/Windows/Fonts/simsun.ttc",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "assets", "fonts", "cjk.ttf"),
+]
 IMAGE = "postcontrol-suite:latest"
 EXCLUDE_DIRS = {".git", ".venv", "storage", "__pycache__", "dist", "wheelhouse", "vendor", ".ocr",
                 ".ocr-tmp", ".pytest_cache", "offline", "node_modules"}

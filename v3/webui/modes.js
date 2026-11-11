@@ -124,6 +124,9 @@
     "r_status": "Статус",
     "r_reason": "Причина · 原因",
     "r_search": "поиск в результатах…",
+    "cov_checked": "Проверено деклараций",
+    "cov_of": "из",
+    "cov_not": "вне проверки",
     "r_none": "Строк с таким статусом нет",
     "r_empty": "Проверка по этому пакету ещё не запускалась.",
     "r_first": "показаны первые 1000 строк — полный список в Excel",
@@ -258,6 +261,9 @@
     "r_status": "Status",
     "r_reason": "Reason · 原因",
     "r_search": "search results…",
+    "cov_checked": "Declarations checked",
+    "cov_of": "of",
+    "cov_not": "not checked",
     "r_none": "No rows with this status",
     "r_empty": "The check has not been run for this package yet.",
     "r_first": "first 1000 rows shown — the full list is in Excel",
@@ -392,6 +398,9 @@
     "r_status": "状态",
     "r_reason": "原因 · Причина",
     "r_search": "在结果中搜索…",
+    "cov_checked": "已检查报关单",
+    "cov_of": "/",
+    "cov_not": "未检查",
     "r_none": "没有此状态的行",
     "r_empty": "此文件包尚未核查。",
     "r_first": "仅显示前 1000 行 — 完整列表见 Excel",
@@ -966,8 +975,8 @@
       const decls = ds.filter(d => d.type === 'ru_dt' || d.type === 'cn_dec');
       const drafts = ds.filter(d => d.type === 'draft'), sys = ds.filter(d => d.type === 'system_export');
       if(src.decls === null || src.decls.some(id => !decls.find(d => d.id === id))){
-        const scans = decls.filter(isScan);
-        src.decls = (scans.length ? scans : decls).map(d => d.id);
+        // по умолчанию проверяем ВСЕ декларации пакета (включая XML и Excel), а не только сканы
+        src.decls = decls.map(d => d.id);
       }
       const done = pack && pack.S.meta && pack.S.meta.status === 'done';
       const opt = (v, lab, cur) => `<option value="${h(v)}" ${String(cur) === String(v) ? 'selected' : ''}>${h(lab)}</option>`;
@@ -1042,11 +1051,11 @@
       if(compact) cols.splice(0, cols.length, ['status', 'r_status'], ['where', 'r_where'], ['values', 'r_vals'], ['reason', 'r_reason']);
       const cell = (r, k) => {
         if(k === 'status') return `<span class="st st-${h(r.status)}">${h(r.status)}</span>`;
-        if(k === 'level') return h(r.level) + (multi ? `<span class="sub">${h(r.declaration)}</span>` : '');
+        if(k === 'level') return h(lvl(r.level)) + (multi ? `<span class="sub">${h(r.declaration)}</span>` : '');
         if(k === 'field') return h(zh ? (r.label_zh || r.label) : r.label) + (r.key ? ' <b title="key">•</b>' : '');
         if(k === 'scan') return h(r.scan) + (r.scan_conf !== undefined && r.scan_conf !== null && r.scan_conf < 0.75
           ? ` <span class="conf conf-m">${Math.round(r.scan_conf * 100)} %</span>` : '');
-        if(k === 'where') return `${h(r.level)}<span class="sub">${cell(r, 'field')}</span>` + (multi ? `<span class="sub">${h(r.declaration)}</span>` : '');
+        if(k === 'where') return `${h(lvl(r.level))}<span class="sub">${cell(r, 'field')}</span>` + (multi ? `<span class="sub">${h(r.declaration)}</span>` : '');
         if(k === 'values') return srcCols.filter(c => r[c[0]] !== '' && r[c[0]] != null)
           .map(c => `<span class="sub">${h(t(c[1]))}</span>${cell(r, c[0])}`).join('');
         if(k === 'reason') return h(zh ? (r.reason_zh || r.reason) : r.reason) + `<span class="zh">${h(zh ? r.reason : r.reason_zh)}</span>`;
@@ -1058,10 +1067,29 @@
           <span class="muted"> · ${h(t('ds_draft'))}: ${h((d.draft && (base(d.draft.file) || d.draft.reason)) || '—')}
           · ${h(t('ds_sys'))}: ${h((d.system && (sysLab(d.system.source) || d.system.reason)) || '—')}${d.system && d.system.lines ? ' (' + d.system.lines + ')' : ''}</span>
           <br><span class="st st-ISSUE">ISSUE ${(d.counts || {}).ISSUE || 0}</span> <span class="st st-REVIEW">REVIEW ${(d.counts || {}).REVIEW || 0}</span> <span class="st st-OK">OK ${(d.counts || {}).OK || 0}</span></div>`).join('');
+      // «Шапка» / «Строка N» приходят из правил по-русски — переводим в китайском и английском
+      const lvl = (v) => {
+        const s0 = String(v || '');
+        if (lang() === 'ru') return s0;
+        const zhMode = lang() === 'zh';
+        if (/^Шапка$/i.test(s0)) return zhMode ? '表头' : 'Header';
+        const m = s0.match(/^Строка\s*(\d+)$/i);
+        if (m) return zhMode ? `第 ${m[1]} 行` : `Line ${m[1]}`;
+        return s0;
+      };
+      const cov = res.coverage || {};
+      const covLine = (cov.available
+        ? `<div class="muted" style="margin:0 0 6px;font-size:12px"><b>${h(t('cov_checked'))}: ${cov.checked} ${h(t('cov_of'))} ${cov.available}</b>`
+          + ((cov.not_checked || []).length
+              ? ` · ${h(t('cov_not'))}: ` + cov.not_checked.map(x => h(x.type_label + ' ' + String(x.file || '').split('/').pop())).join(', ')
+              : '')
+          + `</div>`
+        : '');
       body.innerHTML = `<div class="row" style="margin-bottom:8px">
           <div class="fbtns">${btn('', t('r_all'), c.total)}${btn('ISSUE', 'ISSUE', c.ISSUE)}${btn('REVIEW', 'REVIEW', c.REVIEW)}${btn('OK', 'OK', c.OK)}</div>
           <input class="jsearch" id="rt-q" value="${h(q)}" placeholder="${h(t('r_search'))}">
           <a class="btn ghost sm" href="${h(res.excel)}">${h(t('xls_check'))}</a></div>
+        ${covLine}
         <div class="declsum">${dsum}</div>
         <div class="tbl-wrap" style="max-height:560px"><table class="rtres"><tr>${cols.map(c => `<th>${h(t(c[1]))}</th>`).join('')}</tr>
           ${shown.length ? shown.slice(0, 1000).map(r => '<tr>' + cols.map(c => `<td${c[0] === 'reason' ? ' class="rs"' : ''}>${cell(r, c[0])}</td>`).join('') + '</tr>').join('')

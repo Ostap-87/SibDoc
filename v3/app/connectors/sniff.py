@@ -31,9 +31,9 @@ def _table_headers(name: str, data: bytes) -> list[list]:
     try:
         if low.endswith((".xlsx", ".xlsm", ".xls")):
             import pandas as pd
-            book = pd.ExcelFile(io.BytesIO(data), engine="xlrd" if low.endswith(".xls") else "openpyxl")
-            for sh in book.sheet_names[:5]:
-                raw = book.parse(sh, header=None, nrows=15, dtype=object)
+            sheets = pd.read_excel(io.BytesIO(data), sheet_name=None, header=None, nrows=15,
+                                   dtype=object, engine="xlrd" if low.endswith(".xls") else "openpyxl")
+            for name, raw in list(sheets.items())[:5]:
                 rows += [[v for v in r if v is not None and str(v) != "nan"] for r in raw.values.tolist()]
         elif low.endswith((".csv", ".txt")):
             from app.connectors.fileutil import smart_decode

@@ -44,7 +44,7 @@ from app.services.decl_parser import fields_summary, parse_declaration
 from app.services.engine import run as engine_run
 from app.services.loader import ACCEPTED_EXTS, LoadError, load_sources, read_many
 from app.services.loader import ALL_EXTS, accepted_for  # ВЭД-пакет: PDF и сканы в слотах документов отгрузки
-from app.services.ocr_reader import available_languages, read_scan, tesseract_available
+from app.services.ocr_reader import available_languages, ocr_engine, read_scan, tesseract_available
 from app.services.scan_mapper import build_preview_rows, write_preview_excel
 from app.services.xml_decl import XmlDeclError
 
@@ -826,7 +826,7 @@ SCAN_EXTS = (".pdf", ".jpg", ".jpeg", ".png", ".tif", ".tiff", ".bmp")
 
 @app.get("/api/scans/info")
 def scans_info():
-    return {"ocr_langs": available_languages(), "tesseract": tesseract_available(),
+    return {"ocr_langs": available_languages(), "ocr_engine": ocr_engine(), "tesseract": tesseract_available(),
             "accepted": list(SCAN_EXTS), "loaded": len(_scans)}
 
 
@@ -943,6 +943,19 @@ def run_checks(request: Request):
     files = runs.save(result, cfg)
     _last_result["run"], _last_result["files"] = result, files
     summary = {row["check_id"]: row for row in result.summary_rows()}
+    # проверки, которые не пошли из-за отсутствующих источников: причина — в первой строке результата
+    skipped = []
+    for cid, out in result.outputs.items():
+        if not out.counts().get("SKIPPED"):
+            continue
+        detail = ""
+        try:
+            if len(out.df) and "detail" in out.df.columns:
+                detail = str(out.df.iloc[0]["detail"] or "")
+        except Exception:  # noqa: BLE001
+            detail = ""
+        skipped.append({"check_id": cid, "title": labels.check_title(cid),
+                        "title_zh": labels.check_title(cid, "zh"), "detail": detail})
     n_issue = sum(int(r.get("ISSUE", 0)) for r in summary.values())
     n_review = sum(int(r.get("REVIEW", 0)) for r in summary.values())
     journal.log("run", _user(request),
@@ -960,6 +973,7 @@ def run_checks(request: Request):
     return {
         "run_id": result.run_id, "created_at": result.created_at,
         "summary": result.summary_rows(),
+        "skipped": skipped,
         "sources": result.sources_info,
         "data_quality": [f.as_dict() for f in result.findings],
         "dq_counts": result.dq_counts(),

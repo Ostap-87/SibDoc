@@ -83,19 +83,20 @@ def _header_score(values, wanted_keys: set, syn_keys: set) -> int:
 def _read_excel(data: bytes, filename: str, slot_cfg: dict) -> tuple[pd.DataFrame, dict]:
     engine = "xlrd" if filename.lower().endswith(".xls") else "openpyxl"
     try:
-        book = pd.ExcelFile(io.BytesIO(data), engine=engine)
+        # pandas 3+: read_excel вместо устаревшего ExcelFile.parse; один проход по всем листам
+        preview = pd.read_excel(io.BytesIO(data), sheet_name=None, header=None, nrows=30,
+                                dtype=object, engine=engine)
     except ImportError as exc:
         raise LoadError(f"для {os.path.splitext(filename)[1]} нужен пакет: {exc}")
     wanted = set(map(fdict.header_key, (slot_cfg.get("fields") or {}).values())) | \
         set(map(fdict.header_key, slot_cfg.get("required_columns") or []))
     syn = set(fdict.synonyms_index())
     pinned = slot_cfg.get("sheet")
-    sheets = [pinned] if pinned not in (None, "") else book.sheet_names
+    sheets = [pinned] if pinned not in (None, "") else list(preview)
     best = None
     for sh in sheets:
-        try:
-            raw = book.parse(sh, header=None, nrows=30, dtype=object)
-        except (ValueError, IndexError):
+        raw = preview.get(sh)
+        if raw is None:
             raise LoadError(f"лист «{sh}» не найден в файле")
         for r in range(min(len(raw), 15)):
             sc = _header_score(raw.iloc[r].tolist(), wanted, syn)
@@ -104,9 +105,9 @@ def _read_excel(data: bytes, filename: str, slot_cfg: dict) -> tuple[pd.DataFram
     if best is None:
         raise LoadError("в файле нет листов с данными")
     _, sheet, hdr = best
-    df = book.parse(sheet, header=hdr, dtype=object)
+    df = pd.read_excel(io.BytesIO(data), sheet_name=sheet, header=hdr, dtype=object, engine=engine)
     return df, {"format": "excel", "sheet": str(sheet), "header_row": int(hdr) + 1,
-                "sheets": [str(s) for s in book.sheet_names]}
+                "sheets": [str(s) for s in preview]}
 
 
 def _clean(df: pd.DataFrame) -> pd.DataFrame:

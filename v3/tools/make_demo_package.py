@@ -41,9 +41,45 @@ from make_demo import container, cn_dec_xml, ru_dt_xml  # noqa: E402
 OUT = os.path.join(ROOT, "data", "demo", "package")
 ZIP_NAME = "Пакет_документов_отгрузка_0000117.zip"
 TOP = "Пакет_отгрузки_0000117"
-FONT = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
-FONT_B = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
-FONT_ZH = "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc"
+_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+
+def _first_existing(*paths):
+    """Первый существующий файл из списка: шрифты ищем локально, без сети."""
+    for p in paths:
+        if p and os.path.exists(p):
+            return p
+    return paths[-1] if paths else ""
+
+
+# Шрифты: сначала комплект программы (assets/fonts), затем системные — Linux, macOS, Windows.
+FONT = _first_existing(
+    os.path.join(_ROOT, "assets", "fonts", "DejaVuSans.ttf"),
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+    "/usr/share/fonts/dejavu/DejaVuSans.ttf",
+    "/System/Library/Fonts/Supplemental/Arial.ttf",
+    "/Library/Fonts/Arial.ttf",
+    "C:/Windows/Fonts/arial.ttf",
+)
+FONT_B = _first_existing(
+    os.path.join(_ROOT, "assets", "fonts", "DejaVuSans-Bold.ttf"),
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+    "/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf",
+    "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
+    "/Library/Fonts/Arial Bold.ttf",
+    "C:/Windows/Fonts/arialbd.ttf",
+)
+FONT_ZH = _first_existing(
+    os.path.join(_ROOT, "assets", "fonts", "cjk.ttf"),
+    os.path.join(_ROOT, "assets", "fonts", "cjk.ttc"),
+    "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
+    "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
+    "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
+    "/Library/Fonts/Arial Unicode.ttf",
+    "C:/Windows/Fonts/msyh.ttc",
+    "C:/Windows/Fonts/simsun.ttc",
+    FONT,
+)
 FIXED_DT = (2026, 11, 5, 10, 0, 0)
 
 EXPORTER = "ООО «Пример Экспорт» (вымышленная)"

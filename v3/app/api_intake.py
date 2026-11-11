@@ -341,6 +341,18 @@ def to_retro(pid: str, doc_ids: list | None, user: str) -> dict:
             by_slot.setdefault(slot, []).append(("rows", rows, f"пакет_{d['id']}.csv", d["id"]))
         else:
             skipped.append({"doc_id": d["id"], "reason": "нет извлечённых полей"})
+    # Пакет без выгрузки FineBI: собираем wide table из деклараций пакета,
+    # иначе проверки 0–5 не могут запуститься (см. app/services/wide_from_package.py)
+    wide_generated = False
+    existing = srv._all_sources(cfg)
+    if "wide_table" not in by_slot and existing.get("wide_table") is None:
+        from app.services import wide_from_package as wfp
+        if wfp.has_declarations(chosen):
+            rows = wfp.build_rows(chosen)
+            if rows:
+                by_slot["wide_table"] = [("rows", rows, "пакет_wide_table.csv", None)]
+                wide_generated = True
+
     added = {}
     for slot, entries in by_slot.items():
         files = []
@@ -361,7 +373,39 @@ def to_retro(pid: str, doc_ids: list | None, user: str) -> dict:
             skipped += [{"doc_id": e[3], "reason": f"слот {slot}: {exc}"} for e in entries]
             continue
         srv._store_files(slot, files, append=False)
-        added[slot] = {"documents": [e[3] for e in entries], "rows": int(len(src.df)), "replaced": not multi}
+        added[slot] = {"documents": [e[3] for e in entries if e[3]], "rows": int(len(src.df)),
+                       "replaced": not multi}
+        if slot == "wide_table" and wide_generated:
+            added[slot]["source"] = "собрано из деклараций пакета"
+            added[slot]["note"] = ("выгрузки FineBI в пакете нет — таблица собрана из ДТ и 报关单; "
+                                   "проверки 0–5 работают на данных деклараций")
+    # «SAP vs CD» — ручная сводная таблица. Если её нет, но есть выгрузка SAP (purchase),
+    # собираем из номеров деклараций, которые SAP знает: этого достаточно проверке 0 (полнота).
+    try:
+        if "sap_vs_cd" not in added and srv._all_sources(cfg).get("sap_vs_cd") is None:
+            pur = srv._all_sources(cfg).get("purchase")
+            if pur is not None and getattr(pur, "df", None) is not None and len(pur.df):
+                nums = []
+                # ищем колонку с номером декларации: и по каноническому ключу, и по заголовку файла
+                cand = [c for c in pur.df.columns
+                        if str(c) in ("decl_ru", "decl_num", "decl_cn")
+                        or any(k in str(c).lower() for k in ("decl", "деклар", "报关", "报關"))]
+                for col in cand:
+                    vals = [str(v).strip() for v in pur.df[col].tolist() if str(v).strip()]
+                    if vals:
+                        nums = vals
+                        break
+                nums = list(dict.fromkeys(str(n).strip() for n in nums))
+                if nums:
+                    csv = pd.DataFrame([{"decl_cn": n} for n in nums]).to_csv(index=False).encode("utf-8-sig")
+                    src = srv._ingest("sap_vs_cd", [(csv, srv._safe_name("пакет_sap_vs_cd.csv"))], cfg)
+                    srv._store_files("sap_vs_cd", [(csv, srv._safe_name("пакет_sap_vs_cd.csv"))], append=False)
+                    added["sap_vs_cd"] = {"documents": [], "rows": int(len(src.df)), "replaced": True,
+                                          "source": "собрано из выгрузки SAP",
+                                          "note": "номеров деклараций из SAP: %d" % len(nums)}
+    except Exception as exc:  # noqa: BLE001
+        skipped.append({"doc_id": None, "reason": f"sap_vs_cd: {exc}"})
+
     journal.log("intake_to_retro", user, f"пакет {pid}: " + (", ".join(f"{k}: {len(v['documents'])} док."
                                                                        for k, v in added.items()) or "нечего добавить"),
                 meta={"package": pid, "added": added, "skipped": skipped})

@@ -27,11 +27,14 @@ EXCEL_NAME = "Проверка отгрузки.xlsx"
 
 
 def default_declarations(docs: list) -> list:
-    """Декларации со сканов (PDF / картинки); если таких нет — любые ДТ РФ и 报关单 пакета."""
-    ok = [d for d in docs if d["type"] in cmp.DECL_TYPES and d.get("status") != pipeline.STATUS_UNKNOWN
-          and d.get("status") != pipeline.STATUS_ERROR]
-    scans = [d for d in ok if d.get("format") in ("pdf", "image")]
-    return scans or ok
+    """Все декларации пакета — ДТ РФ и 报关单, включая Excel и XML.
+
+    Раньше по умолчанию брались только сканы (PDF / картинки) — и в проверку не попадали
+    декларации из XML и Excel, хотя они есть в пакете. Теперь проверяются все: неполный охват
+    без предупреждения хуже, чем лишняя строка.
+    """
+    return [d for d in docs if d["type"] in cmp.DECL_TYPES
+            and d.get("status") not in (pipeline.STATUS_UNKNOWN, pipeline.STATUS_ERROR)]
 
 
 def run(package_id: str, declarations: list | None = None, draft="auto", system="auto", references: bool = True,
@@ -42,6 +45,7 @@ def run(package_id: str, declarations: list | None = None, draft="auto", system=
     rl = cmp.rules()
     docs = pkg.documents(package_id)
     by_id = {d["id"]: d for d in docs}
+    explicit = bool(declarations)
     if declarations:
         missing = [x for x in declarations if x not in by_id]
         if missing:
@@ -78,12 +82,26 @@ def run(package_id: str, declarations: list | None = None, draft="auto", system=
                 "counts": cmp.counts(rows), "rows": rows})
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
+    # охват: сколько деклараций пакета проверено и какие остались вне проверки
+    all_decl = [d for d in docs if d["type"] in cmp.DECL_TYPES
+                and d.get("status") not in (pipeline.STATUS_UNKNOWN, pipeline.STATUS_ERROR)]
+    checked_ids = {d["id"] for d in decls}
+    all_ids = {d["id"] for d in all_decl} | checked_ids      # явный выбор может включать документы вне all_decl
+    coverage = {
+        "checked": len(checked_ids),
+        "available": len(all_ids),
+        "explicit": explicit,
+        "not_checked": [{"doc_id": d["id"], "file": d["file"],
+                         "type_label": cls_mod.type_label(d["type"])}
+                        for d in all_decl if d["id"] not in checked_ids],
+    }
     total = {"OK": 0, "REVIEW": 0, "ISSUE": 0, "total": 0}
     for d in out_decls:
         for k in total:
             total[k] += d["counts"].get(k, 0)
     result = {"package_id": package_id, "created": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "user": user,
               "duration_sec": round(time.time() - t0, 2), "counts": total, "declarations": out_decls,
+              "coverage": coverage,
               "rules": "config/rules/realtime.yaml",
               "excel": f"/api/realtime/{package_id}/excel"}
     d = pkg.realtime_dir(package_id)

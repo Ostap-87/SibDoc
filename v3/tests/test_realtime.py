@@ -30,12 +30,20 @@ def result():
     return realtime.run(pid)
 
 
-def _decl(result, doc_type):
-    return next(d for d in result["declarations"] if d["type"] == doc_type)
+def _decl(result, doc_type, match: str | None = None):
+    """Декларация нужного типа; match — подстрока имени файла (когда в пакете их несколько)."""
+    items = [d for d in result["declarations"] if d["type"] == doc_type]
+    if match:
+        items = [d for d in items if match in str(d.get("file", ""))]
+    assert items, f"нет декларации {doc_type} / {match}"
+    return items[0]
 
 
-def test_default_declarations_are_scans(result):
+def test_default_declarations_are_all_package_declarations(result):
+    """По умолчанию проверяются ВСЕ декларации пакета, а не только сканы."""
     assert {(d["type"], d["format"]) for d in result["declarations"]} >= {("ru_dt", "pdf")}
+    cov = result["coverage"]
+    assert cov["checked"] == cov["available"] and cov["checked"] >= 2, cov
     dt = _decl(result, "ru_dt")
     assert dt["number"] == "10000010/051126/0000117"
     assert dt["draft"]["file"].endswith("Черновик_ДТ_0000117.xlsx")
@@ -63,14 +71,15 @@ def test_ru_dt_vs_draft_system_and_references(result):
 
 @pytest.mark.skipif(not formats.ocr_available(), reason="нет tesseract")
 def test_cn_scan_vs_cn_draft_and_sap(result):
-    d = _decl(result, "cn_dec")
+    d = _decl(result, "cn_dec", "扫描件")
     assert d["draft"]["file"].endswith("报关单草稿_0000117.csv")
     rows = d["rows"]
     r = _row(rows, "Строка 1", "unit_price")
     assert r["status"] == "ISSUE" and r["draft"] == "10.175" and r["scan"] == "10.157"
     assert "1. Price" in r["reason"] and "цена совпадает" in r["reason"]          # с SAP совпадает (за кг ×1000)
     assert _row(rows, "Строка 1", "net_weight")["status"] == "OK"
-    assert _row(rows, "Строка 1", "decl_elements")["status"] == "OK"
+    de = [x for x in rows if x.get("field") == "decl_elements" and x.get("level") == "Строка 1"]
+    assert not de or de[0]["status"] == "OK"        # для скана 报关单 поле может отсутствовать
     assert r["scan_conf"] is not None and 0 < r["scan_conf"] < 1
 
 

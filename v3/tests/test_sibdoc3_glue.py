@@ -149,8 +149,13 @@ def test_bulk_package_to_retro_gives_same_numbers_as_slots(api):
     assert len(docs) == 20
     r = client.post(f"/api/intake/packages/{pid}/to-retro", json={}).json()
     assert not r["skipped"], r["skipped"]
-    assert {k: len(v["documents"]) for k, v in r["added"].items()} == {
-        "ru_dt": 6, "cn_dec": 1, "invoice": 6, "packing": 1, "transport": 2, "conformity": 1, "bank": 3}
+    got = {k: len(v["documents"]) for k, v in r["added"].items()}
+    # автоподстановка wide_table / sap_vs_cd не должна перебивать уже загруженные источники
+    assert "wide_table" not in got and "sap_vs_cd" not in got, got
+    expected = {"ru_dt": 6, "cn_dec": 1, "invoice": 6, "packing": 1,
+                "transport": 2, "conformity": 1, "bank": 3}
+    for slot, n in expected.items():
+        assert got.get(slot) == n, (slot, got)
     run = client.post("/api/run").json()["checks"]
     c7, c8 = run["docs_package"]["counts"], run["payments"]["counts"]
     assert (c7["total"], c7["OK"], c7["ISSUE"], c7["REVIEW"]) == (37, 28, 7, 2)

@@ -391,13 +391,13 @@ def grid_to_frame(grid: list[list], kind: str, slot_cfg: dict, filename: str) ->
 def _excel_grids(data: bytes, filename: str) -> list[tuple[str, list[list]]]:
     engine = "xlrd" if filename.lower().endswith(".xls") else "openpyxl"
     try:
-        book = pd.ExcelFile(io.BytesIO(data), engine=engine)
+        sheets = pd.read_excel(io.BytesIO(data), sheet_name=None, header=None,
+                               dtype=object, engine=engine)
     except ImportError as exc:
         raise PackageReadError(f"для {os.path.splitext(filename)[1]} нужен пакет: {exc}")
     out = []
-    for sh in book.sheet_names:
-        raw = book.parse(sh, header=None, dtype=object)
-        out.append((str(sh), raw.astype(object).where(pd.notna(raw), None).values.tolist()))
+    for name, raw in sheets.items():
+        out.append((str(name), raw.astype(object).where(pd.notna(raw), None).values.tolist()))
     return out
 
 

@@ -355,6 +355,7 @@
 
   <div class="card hidden" id="sumCard">
     <h2 data-i18n="summary"></h2>
+    <div id="skipBanner" class="hidden" style="border-left:3px solid #E8A33D;background:#FFF8EC;padding:10px 12px;border-radius:6px;margin:0 0 12px;font-size:13px;line-height:1.45"></div>
     <div class="row" id="stats"></div>
     <div style="margin-top:14px" class="tbl-wrap"><table id="sumTbl"></table></div>
     <div id="ratesUsed" class="note hidden" style="margin-top:10px"></div>
@@ -878,6 +879,34 @@ function renderResults(res){
     <div class="stat"><div class="n n-issue">${tot('ISSUE')}</div><div class="l">ISSUE</div></div>
     <div class="stat"><div class="n n-review">${tot('REVIEW')}</div><div class="l">REVIEW</div></div>
     <div class="stat"><div class="n n-dq">${res.dq_counts.ERROR} / ${res.dq_counts.WARNING}</div><div class="l">${T('dq_ew')}</div></div>`;
+  // причины пропуска приходят по-русски из правил проверок; в китайском режиме переводим типовые
+  const SKIP_ZH = [
+    [/Нужны оба источника: wide table и «SAP vs CD»/i, "需要两个数据源：宽表 和「SAP vs CD」。"],
+    [/Нужны wide table и Purchase/i, "需要宽表（wide table）和采购数据（Purchase）。"],
+    [/Не загружена wide table/i, "未加载宽表（wide table）。"],
+    [/Не загружены условия поставки/i, "未加载交货条件。"],
+    [/не найдена колонка заявленной модели/i, "草稿文件中未找到申报型号列。"],
+    [/Нужны wide table и контракты/i, "需要宽表和合同数据。"],
+  ];
+  function skipDetail(d) {
+    if (!d) return '—';
+    if (LANG !== 'zh') return d;
+    for (const [re, zh] of SKIP_ZH) if (re.test(d)) return zh;
+    return d;
+  }
+  // баннер: какие проверки не пошли и почему — виден до таблицы
+  const skipBox = document.getElementById('skipBanner');
+  const skipped = (res.skipped || []);
+  if (skipBox) {
+    if (!skipped.length) { skipBox.classList.add('hidden'); skipBox.innerHTML = ''; }
+    else {
+      skipBox.classList.remove('hidden');
+      skipBox.innerHTML = `<b>${T('skipped_title')}: ${skipped.length}</b>`
+        + `<div class="muted" style="margin:4px 0 6px">${T('skipped_hint')}</div>`
+        + skipped.map(x => `<div style="margin:2px 0"><b>${esc(checkTitle(x.check_id, x.title))}</b>`
+            + ` — <span class="muted">${esc(skipDetail(x.detail))}</span></div>`).join('');
+    }
+  }
   const cols = ['check', 'total', 'OK', 'ISSUE', 'REVIEW', 'SKIPPED'];
   document.getElementById('sumTbl').innerHTML = '<tr>' + cols.map(c => `<th>${esc(colLabel(c))}</th>`).join('') + '</tr>' +
     sum.map(r => '<tr>' + cols.map(c => `<td>${esc(c === 'check' ? checkTitle(r.check_id, r.check) : r[c])}</td>`).join('') + '</tr>').join('');
@@ -1019,6 +1048,9 @@ checkAuth();
 // Отдельный блок: дополняет карточки коннекторов статусом «работает / работает через выгрузки /
 // нужен доступ: что и у кого» (поля status, need, need_from, verified из /api/connectors) и
 // показывает пояснение по-китайски (detail_zh) на вкладке «8. Оплаты» в режиме 中文.
+Object.assign(I18N.ru, {skipped_title:"Проверки без источников — не выполнены", skipped_hint:"Эти проверки не запускались: для них не хватает данных. Пока они пропущены, отчёт неполный."});
+Object.assign(I18N.en, {skipped_title:"Checks skipped — missing sources", skipped_hint:"These checks did not run because their sources are missing. The report is incomplete while they are skipped."});
+Object.assign(I18N.zh, {skipped_title:"缺少数据源，未执行的检查", skipped_hint:"这些检查未运行：缺少对应数据源。跳过期间报告不完整。"});
 Object.assign(I18N.ru, {cst_title:"Статус коннекторов РФ–Китай", cst_works:"работает", cst_exports:"работает через выгрузки",
   cst_needs:"нужен доступ", cst_need:"что нужно", cst_from:"у кого", cst_exp:"какие выгрузки", cst_ver:"проверка", cst_conn:"Коннектор"});
 Object.assign(I18N.en, {cst_title:"RU–CN connector status", cst_works:"working", cst_exports:"working via exports",
